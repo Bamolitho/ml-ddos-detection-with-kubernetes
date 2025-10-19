@@ -23,11 +23,15 @@ Ce projet vise à combiner **Machine Learning** et **infrastructure cloud-native
 
 Une **attaque DDoS** (Distributed Denial of Service) consiste à inonder un service de requêtes pour en perturber la disponibilité.  Ce type d’attaque vise à rendre un site ou une application inutilisable en surchargeant son infrastructure réseau.
 
-![Architecture DDoS](./Images/DDoS_Architecture.svg)
+**Il y a plusieurs types :**
 
+![Architecture DDoS](./Images/DDoS_Types.svg)
 
+**Exemple d'une attaque DDoS SYN flood [[0]](#ref0):** 
 
-Le **Machine Learning (ML)** — *“the science (and art) of programming computers so they can learn from data”[[1] ](#[1] )* — peut être appliqué pour détecter automatiquement ces comportements anormaux dans le trafic réseau.
+![Example of a DDoS SYN flood attack](./Images/example_syn_flood_attack.png)
+
+Le **Machine Learning (ML)** — *“the science (and art) of programming computers so they can learn from data”[[1]](#ref1)* — peut être appliqué pour détecter automatiquement ces comportements anormaux dans le trafic réseau.
 
 ---
 
@@ -35,7 +39,7 @@ Le **Machine Learning (ML)** — *“the science (and art) of programming comput
 
 Lors d’une attaque DDoS, des millions de requêtes sont envoyées chaque seconde. Un simple modèle de ML risque d’avoir un **temps d’inférence trop élevé**, entraînant une saturation du système.
 
-Par exemple, Cloudflare a subi une attaque DDoS atteignant **11.5 Tbps** (environ **5.1 milliards de requêtes par seconde**) [[2] ](#[2] ).  
+Par exemple, Cloudflare a subi une attaque DDoS atteignant **11.5 Tbps** (environ **5.1 milliards de requêtes par seconde**) [[2]](#ref2).  
 
 **Comment réduire ce temps d’inférence et permettre au modèle d’analyser efficacement un grand volume de trafic en temps réel ?**
 
@@ -136,6 +140,7 @@ Ce projet est distribué sous la licence **MIT** — voir le fichier [LICENSE](L
 
 ## 13. Références
 
-[1] Hands On Machine Learning with Scikit Learn and TensorFlow by Aurélien Géron
+[<a id="ref0">0</a>] [https://www.infosec.gov.hk/en/knowledge-centre/ddos](https://www.infosec.gov.hk/en/knowledge-centre/ddos)  
 
-[2] https://aardwolfsecurity.com/cloudflare-crush-a-record-breaking-ddos-attack/
+[<a id="ref1">1</a>] Aurélien Géron, *Hands-On Machine Learning with Scikit-Learn and TensorFlow* 
+[<a id="ref2">2</a>] [https://aardwolfsecurity.com/cloudflare-crush-a-record-breaking-ddos-attack/](https://aardwolfsecurity.com/cloudflare-crush-a-record-breaking-ddos-attack/)
