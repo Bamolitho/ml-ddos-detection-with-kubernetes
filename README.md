@@ -1,6 +1,6 @@
 # Système distribué de détection d'attaque DDoS via machine learning 
 
-
+Ce projet vise à combiner **Machine Learning** et **infrastructure cloud-native** (Docker, Kubernetes) pour offrir une solution efficace de **détection et mitigation automatique d’attaques DDoS**.
 
 ## Sommaire
 1. [Introduction](#1-introduction)  
@@ -12,11 +12,10 @@
 7. [Outils et technologies utilisées](#7-outils-et-technologies-utilisées)  
 8. [Évaluation et tests](#8-évaluation-et-tests)  
 9. [Documentation et traçabilité](#9-documentation-et-traçabilité)  
-10. [Résumé](#10-résumé)  
-11. [Prochaines étapes](#11-prochaines-étapes)  
-12. [Auteurs](#12-auteurs)  
-13. [Licence](#13-licence)
-14. [Références](#14-références)
+11. [Prochaines étapes](#10-prochaines-étapes)  
+12. [Auteurs](#11-auteurs)  
+13. [Licence](#12-licence)
+14. [Références](#13-références)
 
 ------
 
@@ -24,11 +23,11 @@
 
 Une **attaque DDoS** (Distributed Denial of Service) consiste à inonder un service de requêtes pour en perturber la disponibilité.  Ce type d’attaque vise à rendre un site ou une application inutilisable en surchargeant son infrastructure réseau.
 
-![Architecture DDoS](./Images/DDoS_Architecture.png)
+![Architecture DDoS](./Images/DDoS_Architecture.svg)
 
 
 
-Le **Machine Learning (ML)** — *“the science (and art) of programming computers so they can learn from data”[1]* — peut être appliqué pour détecter automatiquement ces comportements anormaux dans le trafic réseau.
+Le **Machine Learning (ML)** — *“the science (and art) of programming computers so they can learn from data”[[1] ](#[1] )* — peut être appliqué pour détecter automatiquement ces comportements anormaux dans le trafic réseau.
 
 ---
 
@@ -36,7 +35,7 @@ Le **Machine Learning (ML)** — *“the science (and art) of programming comput
 
 Lors d’une attaque DDoS, des millions de requêtes sont envoyées chaque seconde. Un simple modèle de ML risque d’avoir un **temps d’inférence trop élevé**, entraînant une saturation du système.
 
-Par exemple, Cloudflare a subi une attaque DDoS atteignant **11.5 Tbps** (environ **5.1 milliards de requêtes par seconde**) [2].  
+Par exemple, Cloudflare a subi une attaque DDoS atteignant **11.5 Tbps** (environ **5.1 milliards de requêtes par seconde**) [[2] ](#[2] ).  
 
 **Comment réduire ce temps d’inférence et permettre au modèle d’analyser efficacement un grand volume de trafic en temps réel ?**
 
@@ -53,17 +52,18 @@ Développer une solution basée sur le Machine Learning capable de détecter des
   - Gérer automatiquement la répartition de charge entre les instances.  
   - Mettre à l’échelle horizontalement en cas de forte charge.  
 - Stocker les inférences positives (attaques détectées) dans une base de données.  
-- Bloquer dynamiquement la source malveillante (adresse IP) et envoyer une alerte par e-mail et Télégram.
+- Bloquer dynamiquement la source malveillante (adresse IP) et envoyer une alerte par e-mail et Telegram.
 
 ---
 
 ## 5. Architecture cible
 
-![Architecture cible](./Images/architecture_cible.png)
+![Architecture cible](./Images/architecture_cible.svg)
 
 - Le trafic réseau est analysé par les modèles déployés dans des conteneurs Docker.  
 - Kubernetes gère la scalabilité et la tolérance aux pannes.  
 - Les résultats sont stockés et les attaques bloquées dynamiquement.
+- Une interface web affiche les métriques importantes et des logs réseaux
 
 ---
 
@@ -71,30 +71,29 @@ Développer une solution basée sur le Machine Learning capable de détecter des
 
 1. **Revue de littérature** pour le choix du modèle ML le plus performant.  
 2. **Implémentation du pipeline** d’entraînement et d’inférence du modèle.  
-3. **Exposition du modèle via une API Flask**.  
-4. **Création d’une interface web** pour visualiser les informations en temps réel.  
-5. **Stockage des inférences positives** dans une base de données.  
-6. **Blocage automatique** des IP malveillantes et notification par **mail / Telegram**.  
-7. **Création d’un Dockerfile** et **déploiement multi-instance via Docker Compose**.  
-8. **Orchestration complète avec Kubernetes**.
+3. **Exposition du modèle via une FastAPI**.  
+4. **Création d’un Dockerfile** et **déploiement multi-instance via Docker Compose**.  
+5. **Orchestration complète avec Kubernetes**.
+6. **Stockage des inférences positives** dans une base de données.  
+7. **Création d’une interface web** pour visualiser les informations en temps réel.  
+8. **Blocage automatique** des IP malveillantes et notification par **mail / Telegram**.  
 
 ---
 
 ## 7. Outils et technologies utilisées
 
-- **Python** (Machine Learning, API Flask)  
-- **Scikit-learn / TensorFlow / PyTorch** (à confirmer après expérimentation)  
-- **Flask** (exposition de l’API d’inférence)  
-- **MySQL / PostgreSQL** / **Elasticsearch** (stockage des logs et inférences)  
+- **Python** (Machine Learning, FastAPI)  
+- Framework ML : **Scikit-learn**   
+- **MySQL** / **Elasticsearch** (stockage des logs et inférences)  
 - **Docker & Docker Compose** (conteneurisation et parallélisation)  
 - **Kubernetes (k8s)** (orchestration et scaling)  
-- **Telegram API / SMTP** (alertes en temps réel)
+- **Bot telegram (token, chatID) / SMTP** (alertes en temps réel)
 
 ---
 
 ## 8. Évaluation et tests
 
-- Test du modèle sur des jeux de données d’attaques DDoS publics.  
+- Test du modèle sur des jeux de données d’attaques DDoS publics (CICDDoS2019).  
 - Mesure de la précision, du rappel et du F1-score.  
 - Évaluation du **temps d’inférence moyen** par instance.  
 - Test de **scalabilité horizontale** sous Kubernetes.  
@@ -111,14 +110,7 @@ Toutes les étapes seront documentées au fil de l’eau dans ce dépôt :
 
 ---
 
-## 10. Résumé
-
-Ce projet vise à combiner **Machine Learning** et **infrastructure cloud-native** (Docker, Kubernetes)  
-pour offrir une solution efficace de **détection et mitigation automatique d’attaques DDoS**.
-
----
-
-## 11. Prochaines étapes
+## 10. Prochaines étapes
 
 - Choisir et entraîner le modèle ML.  
 - Implémenter le pipeline d’inférence Flask.  
@@ -128,7 +120,7 @@ pour offrir une solution efficace de **détection et mitigation automatique d’
 
 ---
 
-## 12. Auteurs
+## 11. Auteurs
 
 | **Amolitho Baldé** | GitHub : [@Bamolitho](https://github.com/Bamolitho)     |
 | ------------------ | ------------------------------------------------------- |
@@ -136,13 +128,13 @@ pour offrir une solution efficace de **détection et mitigation automatique d’
 
 ---
 
-## 13. Licence
+## 12. Licence
 
 Ce projet est distribué sous la licence **MIT** — voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 
 
-## 14. Références
+## 13. Références
 
 [1] Hands On Machine Learning with Scikit Learn and TensorFlow by Aurélien Géron
 
