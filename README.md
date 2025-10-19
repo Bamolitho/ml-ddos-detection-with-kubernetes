@@ -136,11 +136,12 @@ Toutes les étapes seront documentées au fil de l’eau dans ce dépôt :
 
 Ce projet est distribué sous la licence **MIT** — voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
-
+------
 
 ## 13. Références
 
 [<a id="ref0">0</a>] [https://www.infosec.gov.hk/en/knowledge-centre/ddos](https://www.infosec.gov.hk/en/knowledge-centre/ddos)  
 
 [<a id="ref1">1</a>] Aurélien Géron, *Hands-On Machine Learning with Scikit-Learn and TensorFlow* 
+
 [<a id="ref2">2</a>] [https://aardwolfsecurity.com/cloudflare-crush-a-record-breaking-ddos-attack/](https://aardwolfsecurity.com/cloudflare-crush-a-record-breaking-ddos-attack/)
