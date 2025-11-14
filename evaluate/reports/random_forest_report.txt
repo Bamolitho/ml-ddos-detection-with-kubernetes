@@ -1,0 +1,18 @@
+
+============================================================
+DETAILED REPORT - random_forest
+============================================================
+
+-> Accuracy      : 1.0
+-> Precision     : 1.0
+-> Recall        : 1.0
+-> F1 Score      : 1.0
+-> ROC AUC       : 1.0
+
+-> Inference Time (sec): 0.027194738388061523
+-> Throughput (samples/sec): 735.436381648738
+
+-> Best Threshold: 0.685
+
+ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/random_forest_roc.png
+
