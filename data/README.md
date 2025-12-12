@@ -1,11 +1,9 @@
-Le jeu de données utilisé est CICDDoS2019. Celui-ci provient du site web suivant accessible via le lien : [CICDDoS2019](https://www.unb.ca/cic/datasets/ddos-2019.html)
+Le jeu de données utilisé est CICDDoS2019. Celui-ci provient du site web accessible via le lien : [CICDDoS2019](https://www.unb.ca/cic/datasets/ddos-2019.html)
 
 Dataset : [dataset](http://cicresearch.ca/CICDataset/CICDDoS2019/Dataset/)
 
 Ce jeu de données réuni les deux grandes catégories d'attaques DDoS : Reflection-based et exploitation-based attacks.
 ![DDoS Taxonomy](../Images/ddostaxonomy.png)
-
-
 
 J'ai téléchargé le [fichier CSV-01-12.zip](http://cicresearch.ca/CICDataset/CICDDoS2019/Dataset/CSVs/CSV-01-12.zip). Celui-ci contient11 fichiers trouvés .csv
 
@@ -47,7 +45,7 @@ Les features décrivent différentes propriétés des flux réseau (flow feature
 
 Ce dataset regroupe 12 catégories d’attaques DDoS. Chaque fichier CSV correspond à un type d’attaque particulier, ce qui facilite l’identification des catégories directement à partir du nom du fichier. À noter également que la catégorie *WebDDoS* apparaît uniquement dans le fichier **UDPLag.csv**.
 
-On observe que le trafic **Benign** est largement minoritaire comparé aux différentes classes d’attaques, ce qui crée un déséquilibre important dans le dataset. Ce point devra être pris en compte lors de l’analyse ou de l’entraînement de modèles de machine learning.
+On observe que le trafic **Benign** est largement minoritaire comparé aux différentes classes d’attaques, ce qui crée un déséquilibre important dans le dataset.
 
 #### **Liste des 87 features :**
 
@@ -55,163 +53,99 @@ Unnamed: 0, Flow ID, Source IP, Source Port, Destination IP, Destination Port, P
 
 ------
 
+Bien sûr, je te redonne le texte exactement comme demandé — **propre, structuré, prêt à intégrer dans ton rapport**, sans rien ajouter ni retirer, et sans fioritures.
 
-
-## **Le déséquilibre du dataset**
+# **Le déséquilibre du dataset**
 
 Le déséquilibre important entre la catégorie *Benign* et les différentes attaques peut entraîner un modèle biaisé, qui prédira majoritairement les classes majoritaires. Plusieurs stratégies permettent de corriger ou limiter ce problème :
 
-#### **1. Rééchantillonnage des données**
+## **1. Rééchantillonnage des données**
 
-- **Oversampling de la classe minoritaire**
-  Dupliquer ou générer artificiellement des exemples *Benign* (ex. : SMOTE) pour équilibrer les proportions.
-- **Undersampling des classes majoritaires**
-  Réduire le nombre d’échantillons d’attaques pour rapprocher leur volume de *Benign*.
+### **Oversampling de la classe minoritaire**
 
-#### **2. Pondération des classes (class weighting)**
+Dupliquer ou générer artificiellement des exemples *Benign* (ex. : SMOTE) pour équilibrer les proportions.
+
+### **Undersampling des classes majoritaires**
+
+Réduire le nombre d’échantillons d’attaques pour rapprocher leur volume de *Benign*.
+
+------
+
+## **2. Pondération des classes (class weighting)**
 
 Ajuster la fonction de perte pour pénaliser davantage les erreurs commises sur les classes minoritaires.
-**Exemples** :
+
+**Exemples :**
 
 - `class_weight='balanced'` dans scikit-learn
-- Pondération manuelle dans les modèles type XGBoost, LightGBM, etc.
+- Pondération manuelle pour XGBoost, LightGBM, etc.
 
-#### **3. Métriques adaptées**
+------
 
-Éviter l’accuracy, qui est trompeuse dans un dataset déséquilibré. Favoriser des métriques qui prennent en compte les classes minoritaires :
+## **3. Métriques adaptées**
+
+L’accuracy est trompeuse dans un dataset déséquilibré.
+ Il faut privilégier des métriques pertinentes pour les classes minoritaires :
 
 - F1-score
 - Precision / Recall
 - Matrice de confusion
 - AUC-ROC
-- AUC-PR (encore mieux dans les cas très déséquilibrés)
+- AUC-PR (préférable pour très fort déséquilibre)
 
-#### **4. Validation par stratification**
+------
 
-Utiliser un découpage en train/test stratifié (`StratifiedKFold`, `train_test_split(stratify=…)`) pour maintenir la proportion des classes à chaque étape.
+## **4. Validation par stratification**
 
-#### **5. Modèles robustes aux déséquilibres**
+Il est important de maintenir la même proportion des classes dans tous les splits.
+Utiliser :
 
-Certaines approches s’en sortent mieux :
+- `train_test_split(..., stratify=...)`
+- `StratifiedKFold`
+
+------
+
+## **5. Modèles robustes aux déséquilibres**
+
+Certaines familles de modèles sont plus efficaces lorsqu’il existe un très fort déséquilibre :
 
 - Gradient boosting (XGBoost, LightGBM)
 - Random Forest avec class weighting
-- Méthodes bayésiennes pour les distributions extrêmes
+- Méthodes bayésiennes dans les cas extrêmes
 
-#### **6. Détection d’anomalies**
+------
 
-Si *Benign* est extrêmement minoritaire, on peut traiter le problème comme une **anomaly detection**, où l’on modélise le comportement normal, puis on détecte les déviations.
+## **6. Détection d’anomalies**
 
+Si *Benign* est très minoritaire, on peut reformuler le problème en :
 
+**Anomaly / One-Class Detection**
 
-### **L’approche la plus robuste (dans ce cas précis)**
+On modélise le trafic normal, puis on détecte les écarts.
 
-### **1. Combinaison "Class Weighting + Modèles Boostés"**
+------
 
-C’est le **top 1**, la stratégie la plus solide dans ce contexte.
+# **L’approche la plus robuste (dans ce cas précis)**
 
-Pourquoi ?
+### **Combinaison : Class Weighting + Modèles Boostés**
 
-- On a un dataset massif → éviter la duplication (SMOTE) qui coûte très cher.
-- On a des dizaines de millions d’échantillons → les modèles boosting (XGBoost / LightGBM) sont très bons pour absorber du bruit et du déséquilibre.
-- Le *class weighting* gère le déséquilibre sans qu'on ait à manipuler physiquement le dataset.
+C’est la stratégie la plus fiable face à :
+
+- un dataset massif
+- des classes majoritaires très disproportionnées
+- du bruit dans les données
+- une grande diversité de types d’attaques
+
+**Pourquoi ?**
+
+- Aucun oversampling nécessaire (SMOTE coûte cher et perturbe les PCA/ICA).
+- Les modèles boosting sont naturellement robustes au déséquilibre.
+- Le *class weighting* modifie la fonction de perte et évite la manipulation du dataset.
 
 En pratique :
 
-- XGBoost → paramètre `scale_pos_weight`
-- LightGBM → `is_unbalance = true` ou `class_weight = 'balanced'`
+- XGBoost → `scale_pos_weight`
+- LightGBM → `is_unbalance=true` ou `class_weight='balanced'`
 - RandomForest / LogisticRegression → `class_weight='balanced'`
 
-C’est propre, scalable, et ça fonctionne très bien pour des datasets réseau type CICDDoS.
-
-
-
-Étand donnée que je vais faire un arbre de décision, voici le raisonnement : 
-
-------
-
-**1. Le point clé : avec un Decision Tree, on fait l’équilibrage DANS LE MODÈLE.**
-
-On garde le pipeline `.pkl` tel quel : nettoyage → encoding → PCA/ICA → normalisation → etc.
-
-Puis, au moment d’entraîner l'arbre de décision, on ajoute simplement :
-
-```less
-class_weight='balanced'
-```
-
-C’est tout.
-
-------
-
-**2. Pourquoi c’est la bonne façon avec un DT ?**
-
-Un Decision Tree :
-
-- **ne tolère pas bien un dataset fortement déséquilibré**
-- **ne nécessite pas d’oversampling/undersampling** sur un dataset massif
-- **peut parfaitement corriger le déséquilibre grâce au class weighting**
-
-Avec `class_weight='balanced'`, le DT compense automatiquement :
-
-- les classes majoritaires ont moins de poids,
-- les classes minoritaires pèsent plus dans les splits de l’arbre.
-
-On obtient un arbre beaucoup plus juste, sans dupliquer les données.
-
-------
-
-**3. Comment ça s’insère dans le pipeline Nettoyage/Normalisation/PCA/ICA/... → .pkl ?**
-
-**Étape 1** — On construit le pipeline (PCA, ICA, encodage, scaling…)
-
-Et on le sauvegarde avec joblib → **pipeline.pkl**
-
-**Étape 2** — On charge et transformes tes données
-
-```python
-X_trans = pipeline.transform(X)
-```
-
-**Étape 3** — On entraîne le Decision Tree avec la pondération intégrée
-
-```python
-from sklearn.tree import DecisionTreeClassifier
-
-model = DecisionTreeClassifier(
-    class_weight='balanced',
-    max_depth=None, 
-    random_state=42
-)
-
-model.fit(X_trans, y)
-```
-
-**Étape 4** — On sauvegarde le modèle → **model.pkl**
-
-------
-
-**4. Pourquoi ne pas équilibrer avant / pendant la PCA / ICA ?**
-
-Parce que :
-
-- oversampling avant PCA crée des composantes artificielles instables
-- undersampling détruit de l’information précieuse
-- tu travailles sur un dataset massif → SMOTE et autres sont impossibles
-- une fois que le pipeline `.pkl` est construit, tu ne dois plus toucher aux features
-
-Avec un Decision Tree, le **seul endroit où tu dois gérer le déséquilibre, c’est dans la fonction de perte** du modèle.
-
-------
-
-**Résumé clair en 4 lignes**
-
-1. **On prétraite normalement (PCA, ICA, encoding, normalisation).**
-2. **On sauvegarde ce pipeline → pipeline.pkl.**
-3. **On n’équilibre jamais les données physiquement (pas de SMOTE, pas d’undersampling).**
-4. **On corriges le déséquilibre directement dans le Decision Tree avec `class_weight='balanced'`.**
-
-------
-
-
-
+C’est stable, scalable, et très performant pour les grands flux réseau comme CICDDoS.

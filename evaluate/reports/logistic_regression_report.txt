@@ -1,6 +1,6 @@
 
 ============================================================
-DETAILED REPORT - decision_tree
+DETAILED REPORT - logistic_regression
 ============================================================
 
 -> Accuracy      : 1.0
@@ -12,7 +12,7 @@ DETAILED REPORT - decision_tree
 -> Inference Time (sec): 0.001428842544555664
 -> Throughput (samples/sec): 13997.34356749541
 
--> Best Threshold: 1.0
+-> Best Threshold: 0.9439658127902675
 
-ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/decision_tree_roc.png
+ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/logistic_regression_roc.png
 

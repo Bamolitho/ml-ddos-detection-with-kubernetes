@@ -1,10 +1,12 @@
 """
-Script d'évaluation avancée des modèles :
+Advanced evaluation for ALL models automatically.
+Generates:
 - Accuracy, Precision, Recall, F1
 - ROC AUC + ROC Curve
-- Temps d'inférence + Throughput
-- Recherche du meilleur threshold
-- Rapport détaillé + benchmark automatique
+- Inference time + throughput
+- Best threshold (Youden J)
+- Detailed reports
+- Global benchmark
 """
 
 import os
@@ -21,10 +23,11 @@ from sklearn.metrics import (
     roc_curve
 )
 import matplotlib.pyplot as plt
+from sklearn.exceptions import NotFittedError
 
-# ==========================
-# 1. Chargement des données
-# ==========================
+# ============================================================
+# 1. Load Data
+# ============================================================
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 processed_dir = os.path.normpath(os.path.join(BASE_DIR, "../data/processed"))
@@ -39,9 +42,9 @@ print(f"[INFO] Test shape: {X_test.shape}")
 print("[OK] Data loaded successfully.\n")
 
 
-# ==========================
-# 2. Structure des dossiers
-# ==========================
+# ============================================================
+# 2. Directory Structure
+# ============================================================
 
 eval_dir = os.path.normpath(os.path.join(BASE_DIR, "../evaluate"))
 plots_dir = os.path.join(eval_dir, "plots")
@@ -52,9 +55,9 @@ os.makedirs(plots_dir, exist_ok=True)
 os.makedirs(reports_dir, exist_ok=True)
 
 
-# ==========================
-# 3. Chargement des modèles
-# ==========================
+# ============================================================
+# 3. Load ALL models
+# ============================================================
 
 models_dir = os.path.normpath(os.path.join(BASE_DIR, "../models"))
 model_files = [f for f in os.listdir(models_dir) if f.endswith(".pkl")]
@@ -65,54 +68,85 @@ print("============================================================")
 print("[INFO] Evaluating models...")
 print("============================================================")
 
+
+# ============================================================
+#  UTIL: fallback if model has no predict_proba
+# ============================================================
+
+def safe_predict_proba(model, X):
+    """Handles models without predict_proba (e.g., SVM/Linear models)."""
+    if hasattr(model, "predict_proba"):
+        return model.predict_proba(X)[:, 1]
+    if hasattr(model, "decision_function"):
+        scores = model.decision_function(X)
+        scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-12)
+        return scores
+    preds = model.predict(X)
+    return preds.astype(float)
+
+
+# ============================================================
+# 4. Evaluation loop
+# ============================================================
+
 for file in model_files:
     model_path = os.path.join(models_dir, file)
-    model = joblib.load(model_path)
     name = file.replace(".pkl", "")
 
     print("------------------------------------------------------------")
     print(f"[INFO] Evaluating model: {name}")
     print("------------------------------------------------------------")
 
-    # ======== Inférence + temps ========
-    start = time.time()
-    probas = model.predict_proba(X_test)[:, 1]
-    end = time.time()
+    try:
+        model = joblib.load(model_path)
+    except:
+        print("[ERROR] Could not load model, skipping.")
+        continue
+
+    try:
+        # Inference timing
+        start = time.time()
+        probas = safe_predict_proba(model, X_test)
+        end = time.time()
+    except NotFittedError:
+        print("[ERROR] Model not fitted, skipping.")
+        continue
 
     inference_time = end - start
     throughput = len(X_test) / inference_time
 
-    # ======== Metrics Threshold par défaut (0.5) ========
+    # Default threshold
     preds = (probas >= 0.5).astype(int)
 
     acc = accuracy_score(y_test, preds)
-    prec = precision_score(y_test, preds)
-    rec = recall_score(y_test, preds)
-    f1 = f1_score(y_test, preds)
-
-    # ======== ROC AUC ========
+    prec = precision_score(y_test, preds, zero_division=0)
+    rec = recall_score(y_test, preds, zero_division=0)
+    f1 = f1_score(y_test, preds, zero_division=0)
     roc_auc = roc_auc_score(y_test, probas)
+
     fpr, tpr, thresholds = roc_curve(y_test, probas)
 
-    # ======== Best threshold (Youden J) ========
+    # Best threshold (Youden J)
     J = tpr - fpr
     best_idx = np.argmax(J)
     best_threshold = thresholds[best_idx]
 
-    # ======== Sauvegarde ROC Curve ========
+    # ROC Curve
     plt.figure()
     plt.plot(fpr, tpr)
     plt.plot([0, 1], [0, 1], linestyle="--")
-    plt.xlabel("FPR")
-    plt.ylabel("TPR")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
     plt.title(f"ROC Curve - {name}")
 
     plot_path = os.path.join(plots_dir, f"{name}_roc.png")
     plt.savefig(plot_path)
     plt.close()
 
-    # ======== Rapport détaillé ========
-    report_text = f"""
+    # Detailed report
+    report_path = os.path.join(reports_dir, f"{name}_report.txt")
+    with open(report_path, "w") as f:
+        f.write(f"""
 ============================================================
 DETAILED REPORT - {name}
 ============================================================
@@ -130,15 +164,10 @@ DETAILED REPORT - {name}
 
 ROC Curve saved at: {plot_path}
 
-"""
+""")
 
-    report_file = os.path.join(reports_dir, f"{name}_report.txt")
-    with open(report_file, "w") as f:
-        f.write(report_text)
+    print("[OK] Report saved:", report_path)
 
-    print("[OK] Report saved:", report_file)
-
-    # ======== Stocker les résultats pour benchmark ========
     results.append({
         "model": name,
         "accuracy": acc,
@@ -146,21 +175,21 @@ ROC Curve saved at: {plot_path}
         "recall": rec,
         "f1": f1,
         "roc_auc": roc_auc,
-        "inference_time_sec": inference_time,
+        "inference_time": inference_time,
         "throughput": throughput,
         "best_threshold": best_threshold
     })
 
 
-# ==========================
-# 4. Benchmark final
-# ==========================
+# ============================================================
+# 5. Final benchmark
+# ============================================================
 
-benchmark_df = pd.DataFrame(results)
+df = pd.DataFrame(results).sort_values(by="roc_auc", ascending=False)
 bench_path = os.path.join(eval_dir, "benchmark.csv")
-benchmark_df.to_csv(bench_path, index=False)
+df.to_csv(bench_path, index=False)
 
 print("\n============================================================")
-print("[OK] EVALUATION COMPLETED")
+print("[OK] EVALUATION COMPLETE")
 print("[INFO] Benchmark saved to:", bench_path)
 print("============================================================")

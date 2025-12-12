@@ -9,8 +9,8 @@ DETAILED REPORT - random_forest
 -> F1 Score      : 1.0
 -> ROC AUC       : 1.0
 
--> Inference Time (sec): 0.027194738388061523
--> Throughput (samples/sec): 735.436381648738
+-> Inference Time (sec): 0.02672743797302246
+-> Throughput (samples/sec): 748.2946932731505
 
 -> Best Threshold: 0.685
 

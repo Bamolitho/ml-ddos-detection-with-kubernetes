@@ -1,0 +1,18 @@
+
+============================================================
+DETAILED REPORT - xgboost
+============================================================
+
+-> Accuracy      : 0.9999607260077987
+-> Precision     : 0.9999940068441839
+-> Recall        : 0.9999640421426088
+-> F1 Score      : 0.9999790242689208
+-> ROC AUC       : 0.9999999926227321
+
+-> Inference Time (sec): 0.20457196235656738
+-> Throughput (samples/sec): 871258.2014994691
+
+-> Best Threshold: 0.5645630955696106
+
+ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/xgboost_roc.png
+

@@ -40,7 +40,7 @@
 
 
 
-```
+```bash
 project/
 │
 ├── data/
@@ -84,4 +84,3 @@ project/
 └── README.md
 
 ```
-

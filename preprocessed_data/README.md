@@ -11,7 +11,88 @@ Donc, tu supprimes.
 
 ------
 
-## **1.2 Source IP / Destination IP → DÉCISION IMPORTANTE**
+## **1.2 Source IP / Destinati**"""
+Script d'entraînement des modèles supervisés :
+
+- Chargement des données preprocessées
+- Entraînement : Decision Tree + Random Forest
+- Sauvegarde des modèles entraînés
+"""
+
+import pandas as pd
+import os
+import joblib
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+
+
+# ==========================
+# 1. Chargement des données
+# ==========================
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+processed_dir = os.path.normpath(os.path.join(BASE_DIR, "../data/processed"))
+
+print("============================================================")
+print("[INFO] Loading processed datasets...")
+print("============================================================")
+
+X_train = pd.read_csv(os.path.join(processed_dir, "train_processed.csv"))
+X_val   = pd.read_csv(os.path.join(processed_dir, "val_processed.csv"))
+X_test  = pd.read_csv(os.path.join(processed_dir, "test_processed.csv"))
+
+y_train = pd.read_csv(os.path.join(processed_dir, "train_labels.csv")).values.ravel()
+y_val   = pd.read_csv(os.path.join(processed_dir, "val_labels.csv")).values.ravel()
+y_test  = pd.read_csv(os.path.join(processed_dir, "test_labels.csv")).values.ravel()
+
+print("[OK] Data loaded successfully.\n")
+
+
+# ==========================
+# 2. Modèles supervisés
+# ==========================
+
+dt_model = DecisionTreeClassifier(
+    criterion="gini",
+    max_depth=None,
+    random_state=42
+)
+
+rf_model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=None,
+    n_jobs=-1,
+    random_state=42
+)
+
+models = {
+    "decision_tree": dt_model,
+    "random_forest": rf_model
+}
+
+
+# ==========================
+# 3. Entraînement + sauvegarde
+# ==========================
+
+models_dir = os.path.normpath(os.path.join(BASE_DIR, "../models"))
+os.makedirs(models_dir, exist_ok=True)
+
+for name, model in models.items():
+    print("============================================================")
+    print(f"[INFO] Training model: {name}")
+    print("============================================================")
+
+    model.fit(X_train, y_train)
+    
+    save_path = os.path.join(models_dir, f"{name}.pkl")
+    joblib.dump(model, save_path)
+    
+    print(f"[OK] {name} saved to {save_path}\n")
+
+print("============================================================")
+print("[OK] TRAINING COMPLETED")
+print("============================================================")**on IP → DÉCISION IMPORTANTE**
 
 ### Options possibles :
 
@@ -83,8 +164,6 @@ Garde tout ça.
 
 # 2 — Classification binaire ou multiclasses ?
 
-C’est *LA* question stratégique.
-
 ### **Option A : Multiclasse**
 
 Classes possibles :
@@ -112,7 +191,7 @@ Classes possibles :
 
 ### **Option B : Binaire**
 
-Tu regroupes :
+On regroupe :
 
 - toutes les attaques DDoS → 1
 - tout le trafic normal → 0
@@ -144,39 +223,18 @@ Ce que tu fais après :
 Donc je te recommande fortement :
 
 ➡️ **classification binaire**
- ➡️ toutes attaques → 1
- ➡️ bénin → 0
+➡️ toutes attaques → 1
+➡️ bénin → 0
 
 C’est la meilleure option pour un premier modèle, et même en production.
 
 ------
 
-# 3 — Résumé décisionnel clair
-
-| Colonne            | Action                | Pourquoi                           |
-| ------------------ | --------------------- | ---------------------------------- |
-| Flow ID            | Supprimer             | Non exploitable                    |
-| Unnamed: 0         | Supprimer             | Index inutile                      |
-| Timestamp          | Supprimer             | Pas pertinent pour DDoS            |
-| Source IP          | Supprimer             | Trop spécifique, non généralisable |
-| Destination IP     | Supprimer             | Même raison                        |
-| Source Port        | Garder                | Caractéristique utile              |
-| Destination Port   | Garder                | Idem                               |
-| Flow Duration      | Garder                | Très utile                         |
-| IAT, Length, Flags | Garder                | Les meilleures features            |
-| Label              | Garder ou transformer | Pour binaire : DDoS=1, Benign=0    |
-
-------
-
-
-
-
-
 ## Pipeline Steps
 
 ### Visual Flow
 
-```
+```less
 ┌─────────────────────────────────────┐
 │  [1] DATA CLEANING                  │
 │  - Remove duplicates                │
@@ -290,8 +348,6 @@ preprocessing:
 | `n_components` | int/str | integer or 'auto' | Number of PCA components |
 | `feature_selection` | bool | true/false | Enable feature selection |
 | `selection_method` | str | 'auto', 'f_test', etc. | Feature selection method |
-
-
 
 preprocessing:
 

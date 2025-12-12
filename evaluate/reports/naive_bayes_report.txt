@@ -1,6 +1,6 @@
 
 ============================================================
-DETAILED REPORT - decision_tree
+DETAILED REPORT - naive_bayes
 ============================================================
 
 -> Accuracy      : 1.0
@@ -9,10 +9,10 @@ DETAILED REPORT - decision_tree
 -> F1 Score      : 1.0
 -> ROC AUC       : 1.0
 
--> Inference Time (sec): 0.001428842544555664
--> Throughput (samples/sec): 13997.34356749541
+-> Inference Time (sec): 0.0012516975402832031
+-> Throughput (samples/sec): 15978.300952380952
 
 -> Best Threshold: 1.0
 
-ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/decision_tree_roc.png
+ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/naive_bayes_roc.png
 

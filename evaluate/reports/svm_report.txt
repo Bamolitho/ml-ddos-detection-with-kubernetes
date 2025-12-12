@@ -1,0 +1,18 @@
+
+============================================================
+DETAILED REPORT - svm
+============================================================
+
+-> Accuracy      : 1.0
+-> Precision     : 1.0
+-> Recall        : 1.0
+-> F1 Score      : 1.0
+-> ROC AUC       : 1.0
+
+-> Inference Time (sec): 0.0019860267639160156
+-> Throughput (samples/sec): 10070.357743097238
+
+-> Best Threshold: 0.969483792378502
+
+ROC Curve saved at: /home/ing/Documents/projets/ML/ml-ddos-detection-with-kubernetes/evaluate/plots/svm_roc.png
+

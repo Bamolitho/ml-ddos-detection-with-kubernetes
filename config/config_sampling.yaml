@@ -1,0 +1,22 @@
+dataset:
+  input_path: "../data/raw/merged_datasets.csv" 
+  output_path: "../data/raw/merged_balanced.csv"
+  chunk_size: 400000
+  random_seed: 42
+
+sampling:
+  benign_keep: 1.0
+
+  # Catégorisation automatique selon la taille de chaque classe
+  rules:
+    major_threshold: 5_000_000      # >= 5M échantillons  => majoritaire
+    medium_threshold: 500_000       # >= 500k             => moyenne
+    # En dessous = minoritaire
+
+  target_frac:
+    major: 0.01     # 1%
+    medium: 0.02    # 2%
+    minor: 0.05     # 5%
+
+  # Règle spéciale : ne jamais descendre sous le nombre de BENIGN associés à la même classe
+  min_equals_benign: true
