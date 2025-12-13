@@ -15,6 +15,7 @@ from database.database import init_mysql, ensure_db_initialized
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'default_secret')
+
 # =============================
 # CONFIG MYSQL
 # =============================
@@ -26,12 +27,12 @@ app.config['MYSQL_CHARSET'] = 'utf8mb4'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 app.config['MYSQL_PORT'] = int(os.getenv('DB_PORT', '3306'))
 
-
 mysql = MySQL(app)
 
 # Initialiser le module database avec l'instance MySQL
-init_mysql(mysql)
-ensure_db_initialized()
+with app.app_context():
+    init_mysql(mysql)
+    ensure_db_initialized()
 
 # =============================
 # PAGE DE LOGIN
@@ -155,33 +156,37 @@ def supprimer_compte():
     return redirect(url_for("register"))
 
 # =============================
-# API – DONNÉES DES FLOWS (CORRIGÉ)
+# API – DONNÉES DES FLOWS
 # =============================
-
 @app.route("/flows_json")
 def flows_json():
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
-    cur = mysql.connection.cursor()
-    cur.execute("""
-        SELECT
-            DATE_FORMAT(timestamp, '%Y-%m-%d %H:%i:%s') AS timestamp,
-            src_ip,
-            dst_ip,
-            src_port,
-            dst_port,
-            verdict,
-            probability,
-            action
-        FROM flows
-        ORDER BY timestamp DESC
-        LIMIT 500
-    """)
-    rows = cur.fetchall()
-    cur.close()
-
-    return jsonify(rows)
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT
+                DATE_FORMAT(timestamp, '%Y-%m-%d %H:%i:%s') AS timestamp,
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                verdict,
+                probability,
+                action
+            FROM flows
+            ORDER BY timestamp DESC
+            LIMIT 500
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        
+        print(f"[OK] API /flows_json : {len(rows)} flows retournés")
+        return jsonify(rows)
+    except Exception as e:
+        print(f"[FAILED] Erreur API /flows_json: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # =============================
 # EXPORT CSV
@@ -201,8 +206,8 @@ def export_flows_csv():
 
     if not rows:
         fieldnames = [
-            "timestamp", "source_ip", "destination_ip", "source_port",
-            "destination_port", "verdict", "probability", "action"
+            "timestamp", "src_ip", "dst_ip", "src_port",
+            "dst_port", "verdict", "probability", "action"
         ]
         writer = csv.DictWriter(proxy, fieldnames=fieldnames)
         writer.writeheader()
@@ -247,32 +252,76 @@ def export_flows_json():
     return send_file(mem, as_attachment=True, download_name="flows.json", mimetype="application/json")
 
 # =============================
-# STATISTIQUES SIMPLES
+# STATISTIQUES - PAGE HTML
 # =============================
 @app.route("/calculer_stats")
 def calculer_stats():
     if "user_id" not in session:
         return redirect(url_for("login"))
     
-    stats = {}
+    return render_template("stats.html")
 
-    cur = mysql.connection.cursor()
+# =============================
+# STATISTIQUES - API JSON (temps réel)
+# =============================
+@app.route("/stats_json")
+def stats_json():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        cur = mysql.connection.cursor()
 
-    cur.execute("SELECT COUNT(*) AS total FROM flows")
-    stats["total"] = cur.fetchone()["total"]
+        # Total
+        cur.execute("SELECT COUNT(*) AS total FROM flows")
+        total = cur.fetchone()["total"]
 
-    cur.execute("SELECT COUNT(*) AS benign FROM flows WHERE verdict = 'Benign'")
-    stats["benign"] = cur.fetchone()["benign"]
+        # Benign
+        cur.execute("SELECT COUNT(*) AS benign FROM flows WHERE verdict = 'Benign'")
+        benign = cur.fetchone()["benign"]
 
-    cur.execute("SELECT COUNT(*) AS ddos FROM flows WHERE verdict = 'DDoS'")
-    stats["ddos"] = cur.fetchone()["ddos"]
+        # DDoS
+        cur.execute("SELECT COUNT(*) AS ddos FROM flows WHERE verdict = 'DDoS'")
+        ddos = cur.fetchone()["ddos"]
 
-    cur.execute("SELECT COUNT(*) AS blocked FROM flows WHERE action = 'Blocked'")
-    stats["blocked"] = cur.fetchone()["blocked"]
+        # Bloqués
+        cur.execute("SELECT COUNT(*) AS blocked FROM flows WHERE action = 'Blocked'")
+        blocked = cur.fetchone()["blocked"]
 
-    cur.close()
+        # Vrai Positif : DDoS + Blocked
+        cur.execute("SELECT COUNT(*) AS ddos_blocked FROM flows WHERE verdict = 'DDoS' AND action = 'Blocked'")
+        ddos_blocked = cur.fetchone()["ddos_blocked"]
 
-    return render_template("stats.html", stats=stats)
+        # Faux Positif : DDoS + Passed (DDoS NON bloqué - détection ratée)
+        cur.execute("SELECT COUNT(*) AS ddos_passed FROM flows WHERE verdict = 'DDoS' AND action = 'Passed'")
+        ddos_passed = cur.fetchone()["ddos_passed"]
+
+        # Vrai Négatif : Benign + Passed
+        cur.execute("SELECT COUNT(*) AS benign_passed FROM flows WHERE verdict = 'Benign' AND action = 'Passed'")
+        benign_passed = cur.fetchone()["benign_passed"]
+
+        # Faux Négatif : Benign + Blocked (trafic légitime bloqué à tort)
+        cur.execute("SELECT COUNT(*) AS benign_blocked FROM flows WHERE verdict = 'Benign' AND action = 'Blocked'")
+        benign_blocked = cur.fetchone()["benign_blocked"]
+
+        cur.close()
+
+        stats = {
+            "total": total,
+            "benign": benign,
+            "ddos": ddos,
+            "blocked": blocked,
+            "ddos_blocked": ddos_blocked,    # Vrai Positif (VP)
+            "ddos_passed": ddos_passed,      # Faux Positif (FP) - DDoS non bloqué
+            "benign_passed": benign_passed,  # Vrai Négatif (VN)
+            "benign_blocked": benign_blocked # Faux Négatif (FN) - Benign bloqué
+        }
+
+        print(f"[OK] API /stats_json : {stats}")
+        return jsonify(stats)
+    except Exception as e:
+        print(f"[FAILED] Erreur API /stats_json: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # =============================
 # LOGOUT
@@ -284,14 +333,15 @@ def logout():
     return redirect(url_for("login"))
 
 # =============================
-# SOAR utilities
+# SOAR UTILITIES
 # =============================
 def notify_soar(flow):
+    """Notifie le système SOAR en cas de détection DDoS"""
     if flow["verdict"] != "DDoS":
         return
 
     try:
-        requests.post(
+        response = requests.post(
             "http://soar:6000/alert",
             json={
                 "secret": os.getenv("SOAR_SECRET"),
@@ -303,8 +353,9 @@ def notify_soar(flow):
             },
             timeout=2
         )
+        print(f"[SOAR] Notification envoyée : {response.status_code}")
     except Exception as e:
-        print(f"[SOAR] erreur notification: {e}")
+        print(f"[SOAR] Erreur notification: {e}")
 
 # =============================
 # MAIN

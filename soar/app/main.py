@@ -8,6 +8,11 @@ from telegram import send_telegram
 from whitelist import is_whitelisted
 
 # =============================
+# CONSTANTES SOAR
+# =============================
+SOAR_MIN_PROBABILITY = float(os.getenv("SOAR_MIN_PROBABILITY", 0.8))
+
+# =============================
 # ENV (SECRETS)
 # =============================
 WEBHOOK_SECRET = os.getenv("SOAR_WEBHOOK_SECRET")
@@ -19,9 +24,6 @@ WHITELIST_IPS = [ip.strip() for ip in WHITELIST_ENV.split(",") if ip.strip()]
 
 if not WEBHOOK_SECRET:
     raise RuntimeError("Missing SOAR_WEBHOOK_SECRET")
-
-if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-    raise RuntimeError("Missing TELEGRAM credentials")
 
 # =============================
 # PATHS
@@ -42,20 +44,17 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("soar")
-logger.info("SOAR service starting...")
+logger.info("SOAR service starting")
 
 # =============================
-# LOAD CONFIG (NON-SECRETS)
+# LOAD CONFIG
 # =============================
-try:
-    with open(CONFIG_PATH) as f:
-        CONFIG = json.load(f)
-except Exception as e:
-    logger.critical(f"Cannot load config.json: {e}")
-    raise
+with open(CONFIG_PATH) as f:
+    CONFIG = json.load(f)
 
 BLOCKING_METHOD = CONFIG.get("blocking", {}).get("method", "iptables")
 logger.info(f"Blocking method: {BLOCKING_METHOD}")
+logger.info(f"SOAR min probability: {SOAR_MIN_PROBABILITY}")
 
 # =============================
 # FLASK APP
@@ -68,36 +67,42 @@ app = Flask(__name__)
 @app.route("/alert", methods=["POST"])
 def alert():
     data = request.get_json()
-
     if not data:
-        return jsonify({"error": "invalid payload"}), 400
+        return jsonify({"status": "invalid_payload"}), 400
 
-    # Webhook auth
+    # --- AUTH ---
     if data.get("secret") != WEBHOOK_SECRET:
-        logger.warning("Unauthorized webhook attempt")
-        return jsonify({"error": "unauthorized"}), 401
+        logger.warning("Unauthorized webhook")
+        return jsonify({"status": "unauthorized"}), 401
 
     src_ip = data.get("src_ip")
     verdict = data.get("verdict")
-    probability = data.get("probability", "N/A")
+    probability = float(data.get("probability", 0))
 
+    # --- SANITY ---
     if not src_ip or verdict != "DDoS":
         return jsonify({"status": "ignored"})
 
-    # Whitelist check
+    # --- LOW CONFIDENCE ---
+    if probability < SOAR_MIN_PROBABILITY:
+        logger.info(
+            f"Low confidence DDoS {src_ip} "
+            f"(prob={probability}) → passed"
+        )
+        return jsonify({"status": "passed"})
+
+    # --- WHITELIST ---
     is_wl, rule = is_whitelisted(src_ip, WHITELIST_IPS)
     if is_wl:
-        msg = f"[WHITELIST]\nIP: {src_ip}\nMatch: {rule}\nAction: none"
-        logger.info(msg)
-        send_telegram(msg)
-        return jsonify({"status": "whitelisted"})
+        logger.info(f"Whitelisted IP {src_ip} ({rule})")
+        return jsonify({"status": "passed"})
 
-    # Blocking
-    success = False
+    # --- BLOCKING ---
     if BLOCKING_METHOD == "iptables":
         success = block_ip(src_ip)
     else:
         logger.error(f"Unknown blocking method: {BLOCKING_METHOD}")
+        return jsonify({"status": "failed"}), 500
 
     if success:
         msg = (
@@ -110,7 +115,9 @@ def alert():
         send_telegram(msg)
         return jsonify({"status": "blocked"})
 
+    # --- FAILURE ---
     logger.error(f"Blocking failed for {src_ip}")
+    send_telegram(f"⚠️ Blocage échoué pour {src_ip}")
     return jsonify({"status": "failed"}), 500
 
 

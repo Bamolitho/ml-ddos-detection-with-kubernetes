@@ -23,15 +23,15 @@ async function fetchFlows() {
   try {
     const res = await fetch('/flows_json');
     if (!res.ok) {
-      console.error('Erreur HTTP:', res.status, res.statusText);
+      console.error('❌ Erreur HTTP:', res.status, res.statusText);
       throw new Error(`Erreur HTTP ${res.status}`);
     }
     const data = await res.json();
-    console.log('Données reçues:', data.length, 'flows');
-    console.log('Premier flow:', data[0]); // Debug pour voir la structure
+    console.log('✅ Données reçues:', data.length, 'flows');
+    console.log('📋 Premier flow:', data[0]);
     return data;
   } catch (err) {
-    console.error('Erreur fetch:', err);
+    console.error('❌ Erreur fetch:', err);
     flowsBody.innerHTML = '<tr><td colspan="8" class="empty">Erreur de connexion au serveur.</td></tr>';
     return [];
   }
@@ -47,13 +47,12 @@ function formatTimestamp(ts) {
   return ts;
 }
 
-
 function renderFlows(flows) {
   const search = searchInput.value.trim().toLowerCase();
   const verdictFilter = verdictSelect.value;
   const actionFilter = actionSelect.value;
 
-  console.log('Filtrage:', { 
+  console.log('🔍 Filtrage:', { 
     search, 
     verdictFilter, 
     actionFilter, 
@@ -61,7 +60,6 @@ function renderFlows(flows) {
   });
 
   const filtered = flows.filter(f => {
-    // IMPORTANT: utiliser src_ip et dst_ip (noms MySQL)
     const matchSearch =
       !search ||
       (f.src_ip && f.src_ip.toLowerCase().includes(search)) ||
@@ -77,7 +75,7 @@ function renderFlows(flows) {
     return matchSearch && matchVerdict && matchAction;
   });
 
-  console.log('Flows filtrés:', filtered.length);
+  console.log('✅ Flows filtrés:', filtered.length);
 
   flowsBody.innerHTML = '';
 
@@ -92,9 +90,21 @@ function renderFlows(flows) {
   filtered.forEach(f => {
     const tr = document.createElement('tr');
     
-    // Ajouter classe 'ddos-row' si verdict = DDoS
-    if (f.verdict && f.verdict.toLowerCase() === 'ddos') {
-      tr.classList.add('ddos-row');
+    const verdict = (f.verdict || '').toLowerCase();
+    const action = (f.action || '').toLowerCase();
+
+    // ✅ Logique de couleurs basée sur verdict + action
+    if (verdict === 'ddos' && action === 'passed') {
+      tr.classList.add('warning-row'); // Jaune foncé (DDoS non bloqué = DANGER)
+    } 
+    else if (verdict === 'ddos' && action === 'blocked') {
+      tr.classList.add('danger-row'); // Rouge foncé (DDoS détecté et bloqué)
+    } 
+    else if (verdict === 'benign' && action === 'blocked') {
+      tr.classList.add('anomaly-row'); // Noir (Benign bloqué = ANOMALIE)
+    } 
+    else if (verdict === 'benign' && action === 'passed') {
+      tr.classList.add('safe-row'); // Vert (Tout va bien)
     }
 
     tr.innerHTML = `
@@ -113,7 +123,7 @@ function renderFlows(flows) {
 }
 
 async function chargerEtAfficher() {
-  console.log('Chargement des flows...');
+  console.log('🔄 Chargement des flows...');
   const flows = await fetchFlows();
   renderFlows(flows);
 }

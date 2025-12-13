@@ -1,7 +1,7 @@
 def is_whitelisted(ip: str, whitelist: list):
     """
     Vérifie si une IP est whitelistée.
-    Supporte les préfixes (ex: 192.168.1.)
+    Supporte les préfixes (ex: x.y.z.)
     """
     if not ip:
         return False, None

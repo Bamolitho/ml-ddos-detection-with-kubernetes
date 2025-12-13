@@ -1,3 +1,5 @@
+Le SOAR est l’autorité des notifications et des actions (passed/blocked/whitelist)
+
 # 1️⃣ Vue d’ensemble de l’architecture
 
 ```bash
@@ -449,5 +451,28 @@ Insertion DB
 ┌──────────────┐
 │   Database   │  (truth)
 └──────────────┘
+```
+
+
+
+```less
+PACKET
+  ↓
+ML verdict = DDoS
+  ↓
+CALL SOAR
+  ↓
+SOAR:
+  - whitelist ?
+  - block ?
+  ↓
+decision = Blocked | Passed
+  ↓
+INSERT INTO flows (action = decision)
+
+```
+
+```objective-c
+CAPTURE → ML → ORCHESTRATEUR → SOAR → ACTION → DB
 ```
 

@@ -4,10 +4,12 @@ import json
 import sys
 import os
 import mysql.connector
+import requests
+
 from capture.realtime_capture import RealtimeCapture
 
 # ======================================================================
-# CONFIGURATION MYSQL (SANS FLASK)
+# MYSQL
 # ======================================================================
 
 def get_db_connection():
@@ -21,7 +23,7 @@ def get_db_connection():
     )
 
 # ======================================================================
-# FEATURES CICFlowMeter (DOIT MATCHER LE MODELE)
+# CICFLOWMETER FEATURES (STRICT ORDER)
 # ======================================================================
 
 CICFLOWMETER_FEATURES = [
@@ -46,15 +48,11 @@ CICFLOWMETER_FEATURES = [
     "Idle Std","Idle Max","Idle Min","SimillarHTTP","Inbound"
 ]
 
-# ======================================================================
-# NORMALISATION DES FEATURES
-# ======================================================================
-
 def normalize_flow_dict(flow):
     return {col: flow.get(col, 0) for col in CICFLOWMETER_FEATURES}
 
 # ======================================================================
-# ORCHESTRATEUR
+# ORCHESTRATOR
 # ======================================================================
 
 class OrchestratorPrediction:
@@ -64,8 +62,42 @@ class OrchestratorPrediction:
         self.capture = RealtimeCapture(interface=self.interface)
         self.capture.flow_callback = self.handle_flow
 
-        print("[OK] Orchestrateur initialisé")
-        print(f"[OK] Interface réseau : {self.interface}")
+        self.soar_url = os.getenv("SOAR_URL", "http://127.0.0.1:6000/alert")
+        self.soar_secret = os.getenv("SOAR_WEBHOOK_SECRET")
+
+        if not self.soar_secret:
+            raise RuntimeError("SOAR_WEBHOOK_SECRET missing")
+
+        print("[OK] Orchestrator ready")
+        print("[OK] Interface :", self.interface)
+        print("[OK] SOAR URL  :", self.soar_url)
+
+    # ------------------------------------------------------------------
+    def call_soar(self, packet):
+        try:
+            resp = requests.post(
+                self.soar_url,
+                json={
+                    "secret": self.soar_secret,
+                    "src_ip": packet["src_ip"],
+                    "verdict": packet["ml_verdict"],
+                    "probability": packet["probability"]
+                },
+                timeout=3
+            )
+
+            if resp.status_code != 200:
+                return "Passed", "soar_http_error"
+
+            status = resp.json().get("status", "ignored")
+
+            if status == "blocked":
+                return "Blocked", "soar_blocked"
+
+            return "Passed", "soar_passed"
+
+        except Exception:
+            return "Passed", "soar_unreachable"
 
     # ------------------------------------------------------------------
     def handle_flow(self, flow_features):
@@ -73,64 +105,60 @@ class OrchestratorPrediction:
         normalized = normalize_flow_dict(flow_features)
         json_input = json.dumps(normalized)
 
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         cmd = [
             sys.executable,
-            os.path.join(BASE_DIR, "inference/predict.py"),
+            os.path.join(base_dir, "inference/predict.py"),
             "--json",
             json_input
         ]
 
-        try:
-            result = subprocess.run(
-                cmd,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
 
-            if result.stderr:
-                print("ERREUR predict.py :", result.stderr)
+        if not result.stdout.strip():
+            return
 
-            if not result.stdout.strip():
-                print("Aucune sortie JSON reçue.")
-                return
+        prediction_json = json.loads(result.stdout)
+        pred = prediction_json["results"][0]
 
-            prediction_json = json.loads(result.stdout)
+        packet = {
+            "src_ip": flow_features.get("Source IP"),
+            "dst_ip": flow_features.get("Destination IP"),
+            "src_port": flow_features.get("Source Port"),
+            "dst_port": flow_features.get("Destination Port"),
 
-            pred_entry = prediction_json["results"][0]
+            # ML output (IMMUTABLE)
+            "prediction": pred["prediction"],
+            "ml_verdict": pred["verdict"],
+            "probability": pred["probability"],
+            "threshold": prediction_json.get("threshold"),
 
-            verdict = pred_entry["verdict"]
-            probability = pred_entry["probability"]
-            prediction = pred_entry["prediction"]
-            threshold = prediction_json.get("threshold")
+            # SOAR decision
+            "action": "Passed",
+            "decision_source": "ml_only"
+        }
 
-            action = "Blocked" if prediction == 1 else "Passed"
+        # ==============================================================
+        # SOAR DECISION
+        # ==============================================================
 
-            packet = {
-                "src_ip": flow_features.get("Source IP"),
-                "dst_ip": flow_features.get("Destination IP"),
-                "src_port": flow_features.get("Source Port"),
-                "dst_port": flow_features.get("Destination Port"),
-                "prediction": prediction,
-                "verdict": verdict,
-                "probability": probability,
-                "threshold": threshold,
-                "action": action
-            }
+        if packet["ml_verdict"] == "DDoS":
+            action, source = self.call_soar(packet)
+            packet["action"] = action
+            packet["decision_source"] = source
 
-            print("\n=== FLOW ===")
-            print(json.dumps(packet, indent=4))
+        print("\n=== FLOW FINAL ===")
+        print(json.dumps(packet, indent=4))
 
-            self.insert_flow_db(packet)
-
-        except Exception as e:
-            print("ERREUR orchestrateur :", e)
+        self.insert_flow_db(packet)
 
     # ------------------------------------------------------------------
     def insert_flow_db(self, packet):
-
         try:
             conn = get_db_connection()
             cur = conn.cursor()
@@ -138,8 +166,9 @@ class OrchestratorPrediction:
             cur.execute(
                 """
                 INSERT INTO flows
-                (timestamp, src_ip, dst_ip, src_port,
-                 dst_port, prediction, verdict, probability, threshold, action)
+                (timestamp, src_ip, dst_ip, src_port, dst_port,
+                 prediction, verdict, probability, threshold,
+                 action)
                 VALUES (NOW(), %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
@@ -148,7 +177,7 @@ class OrchestratorPrediction:
                     packet["src_port"],
                     packet["dst_port"],
                     packet["prediction"],
-                    packet["verdict"],
+                    packet["ml_verdict"],
                     packet["probability"],
                     packet["threshold"],
                     packet["action"]
@@ -158,14 +187,12 @@ class OrchestratorPrediction:
             cur.close()
             conn.close()
 
-            print("[DB] Flow enregistré")
-
         except Exception as e:
             print("[DB ERROR]", e)
 
     # ------------------------------------------------------------------
     def start(self):
-        print(f"\n--- ORCHESTRATEUR EN MARCHE SUR {self.interface} ---\n")
+        print(f"\n--- ORCHESTRATOR ACTIVE ON {self.interface} ---\n")
         self.capture.start()
 
 # ======================================================================

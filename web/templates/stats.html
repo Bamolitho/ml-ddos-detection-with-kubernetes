@@ -2,62 +2,158 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Statistiques - Détection DDoS</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='stats.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
     <header>
-        <h1>Statistiques du système de détection DDoS</h1>
-        <a href="{{ url_for('dashboard') }}">
-            <button>Retour au tableau de bord</button>
-        </a>
+        <div>
+            <h1>📊 Statistiques du système de détection DDoS</h1>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('dashboard') }}">
+                <button>← Retour au tableau de bord</button>
+            </a>
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('logout') }}">
+                    <button class="btn-outline">Se déconnecter</button>
+                </a>
+            {% endif %}
+        </div>
     </header>
 
     <main>
-        <h2>Résumé des analyses réseau</h2>
+        <h2>Analyse des performances en temps réel</h2>
 
-        <section class="stats">
-            <table>
+        <!-- Cartes KPI -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total des flux</h3>
+                <p class="value" id="stat-total">0</p>
+                <p class="label">Flux analysés</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Flux bénins</h3>
+                <p class="value" id="stat-benign">0</p>
+                <p class="label">Trafic légitime</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Attaques DDoS</h3>
+                <p class="value" id="stat-ddos">0</p>
+                <p class="label">Menaces détectées</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Actions de blocage</h3>
+                <p class="value" id="stat-blocked">0</p>
+                <p class="label">Flux bloqués</p>
+            </div>
+
+            <div class="stat-card precision">
+                <h3>Précision</h3>
+                <p class="value" id="stat-precision">0%</p>
+                <p class="label">VP / (VP + FP)</p>
+            </div>
+
+            <div class="stat-card recall">
+                <h3>Rappel</h3>
+                <p class="value" id="stat-recall">0%</p>
+                <p class="label">VP / (VP + FN)</p>
+            </div>
+
+            <div class="stat-card f1-score">
+                <h3>F1-Score</h3>
+                <p class="value" id="stat-f1">0%</p>
+                <p class="label">Moyenne harmonique</p>
+            </div>
+        </div>
+
+        <!-- Graphique circulaire -->
+        <section class="chart-section">
+            <h3>Répartition des prédictions</h3>
+            <div class="chart-container">
+                <canvas id="confusionChart"></canvas>
+            </div>
+            <p id="last-update">Dernière mise à jour : --</p>
+        </section>
+
+        <!-- Matrice de confusion -->
+        <section class="confusion-section">
+            <h3>Matrice de confusion</h3>
+            
+            <table class="confusion-table">
                 <thead>
                     <tr>
-                        <th>Indicateur</th>
-                        <th>Valeur</th>
+                        <th></th>
+                        <th colspan="2">Prédiction</th>
+                    </tr>
+                    <tr>
+                        <th>Réalité</th>
+                        <th>DDoS</th>
+                        <th>Benign</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     <tr>
-                        <td>Total des flux analysés</td>
-                        <td><strong>{{ stats.total }}</strong></td>
+                        <th>DDoS</th>
+                        <td class="metric-vp" id="metric-vp">0</td>
+                        <td class="metric-fn" id="metric-fn">0</td>
                     </tr>
-
                     <tr>
-                        <td>Flux bénins détectés</td>
-                        <td>{{ stats.benign }}</td>
-                    </tr>
-
-                    <tr>
-                        <td>Attaques DDoS détectées</td>
-                        <td>{{ stats.ddos }}</td>
-                    </tr>
-
-                    <tr>
-                        <td>Actions de blocage appliquées</td>
-                        <td>{{ stats.blocked }}</td>
+                        <th>Benign</th>
+                        <td class="metric-fp" id="metric-fp">0</td>
+                        <td class="metric-vn" id="metric-vn">0</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Légende -->
+            <div class="legend">
+                <div class="legend-item vp">
+                    <div class="legend-color"></div>
+                    <div class="legend-text">
+                        <strong>Vrai Positif (VP)</strong>
+                        <small>DDoS détecté et bloqué ✅</small>
+                    </div>
+                </div>
+
+                <div class="legend-item fp">
+                    <div class="legend-color"></div>
+                    <div class="legend-text">
+                        <strong>Faux Positif (FP)</strong>
+                        <small>DDoS non bloqué ⚠️ (critique)</small>
+                    </div>
+                </div>
+
+                <div class="legend-item vn">
+                    <div class="legend-color"></div>
+                    <div class="legend-text">
+                        <strong>Vrai Négatif (VN)</strong>
+                        <small>Benign détecté et passé ✅</small>
+                    </div>
+                </div>
+
+                <div class="legend-item fn">
+                    <div class="legend-color"></div>
+                    <div class="legend-text">
+                        <strong>Faux Négatif (FN)</strong>
+                        <small>Benign bloqué à tort ❌</small>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
     <footer>
-        {% if session.get('user_id') %}
-        <button class="logout-btn">
-            <a href="{{ url_for('logout') }}">Se déconnecter</a>
-        </button>
-        {% endif %}
-        <p>© 2025 Système de détection DDoS</p>
+        <p>© 2025 Système de détection DDoS - Mise à jour automatique toutes les 5s</p>
     </footer>
+
+    <script src="{{ url_for('static', filename='stats.js') }}"></script>
 </body>
 </html>
