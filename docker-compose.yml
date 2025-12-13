@@ -73,8 +73,24 @@ services:
       db:
         condition: service_healthy
 
+# -- Service 4 : proxy --
+  soar:
+    build: 
+      context: ./soar
+      dockerfile: Dockerfile
+    container_name: soar
+    restart: unless-stopped
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    env_file:
+      - .env
+    ports:
+      - "6000:6000"
+    volumes:
+      - ./soar/logs:/var/log/soar
 
-  # -- Service 4 : proxy --
+  # -- Service 5 : proxy --
   nginx:
     image: nginx:alpine
     container_name: nginx_proxy

@@ -6,6 +6,7 @@ import io
 import json
 import sys
 import os
+import requests
 from datetime import datetime
 
 # Import du module database
@@ -281,6 +282,29 @@ def logout():
     session.clear()
     flash("Déconnexion réussie.", "success")
     return redirect(url_for("login"))
+
+# =============================
+# SOAR utilities
+# =============================
+def notify_soar(flow):
+    if flow["verdict"] != "DDoS":
+        return
+
+    try:
+        requests.post(
+            "http://soar:6000/alert",
+            json={
+                "secret": os.getenv("SOAR_SECRET"),
+                "src_ip": flow["src_ip"],
+                "verdict": flow["verdict"],
+                "probability": flow["probability"],
+                "flow_id": flow["id"],
+                "timestamp": flow["timestamp"]
+            },
+            timeout=2
+        )
+    except Exception as e:
+        print(f"[SOAR] erreur notification: {e}")
 
 # =============================
 # MAIN
