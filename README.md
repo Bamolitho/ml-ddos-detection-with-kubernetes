@@ -88,3 +88,44 @@ project/
 Lancer l'orchestrateur comme ça : 
 
 sudo -E /home/ing/amomo_venv/bin/python3 orchestrator_prediction.py
+sudo -E /home/ing/amomo_venv/bin/python3 -m capture.orchestrator_prediction
+
+
+
+```less
+[ Orchestrator Worker ]
+        |
+        | INSERT
+        v
+     [ MySQL ]
+        ^
+        | SELECT
+[ Flask Dashboard ] ---> [ Nginx ] ---> Browser
+```
+
+```less
+┌────────────┐
+│ Orchestrator│───► MySQL ◄─── Dashboard
+│ (scapy + ML)│
+└────────────┘
+        │
+        ▼
+   Trafic réseau réel
+
+```
+
+```less
+[ Orchestrator ]
+      |
+      | INSERT
+      ▼
+    MySQL
+      ▲
+      | SELECT (toutes les 5s)
+[ Flask API ]  ←  GET /flows_json
+      ▲
+      |
+[ Browser JS ]
+
+```
+

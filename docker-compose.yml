@@ -9,8 +9,15 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
+    command:
+      [
+        "--default-time-zone=America/Montreal",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci"
+      ]
     volumes:
       - ./database/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./database/init_timezone.sql:/docker-entrypoint-initdb.d/init_timezone.sql
       - db_data:/var/lib/mysql
     ports:
       - "3307:3306"
@@ -28,8 +35,8 @@ services:
     container_name: dashboard
     restart: always
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
+      DB_HOST: db
+      DB_PORT: 3306
       DB_DATABASE: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -43,10 +50,31 @@ services:
     volumes:
       - ./web:/web
       - ./database:/web/database
-      - ./compte_bancaire.py:/web/compte_bancaire.py
+
+# -- Service 3 : Orchestrateur de prédiction --
+  orchestrator:
+    build: 
+      context: .
+      dockerfile: capture/Dockerfile
+    container_name: orchestrator_worker
+    restart: always
+    privileged: true   # ⚠️ obligatoire pour capture réseau
+    network_mode: host # ⚠️ accès à l’interface réseau réelle
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      DB_HOST: localhost
+      DB_PORT: 3307
+      DB_DATABASE: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
 
 
-  # -- Service 
+  # -- Service 4 : proxy --
   nginx:
     image: nginx:alpine
     container_name: nginx_proxy

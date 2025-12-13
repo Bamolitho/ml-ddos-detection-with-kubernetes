@@ -22,10 +22,17 @@ window.onclick = function (event) {
 async function fetchFlows() {
   try {
     const res = await fetch('/flows_json');
-    if (!res.ok) throw new Error('Erreur lors du fetch des flux');
-    return await res.json();
+    if (!res.ok) {
+      console.error('Erreur HTTP:', res.status, res.statusText);
+      throw new Error(`Erreur HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    console.log('Données reçues:', data.length, 'flows');
+    console.log('Premier flow:', data[0]); // Debug pour voir la structure
+    return data;
   } catch (err) {
-    console.error(err);
+    console.error('Erreur fetch:', err);
+    flowsBody.innerHTML = '<tr><td colspan="8" class="empty">Erreur de connexion au serveur.</td></tr>';
     return [];
   }
 }
@@ -35,18 +42,32 @@ function formatProbability(p) {
   return (Number(p) * 100).toFixed(1) + '%';
 }
 
+function formatTimestamp(ts) {
+  if (!ts) return '-';
+  return ts;
+}
+
+
 function renderFlows(flows) {
   const search = searchInput.value.trim().toLowerCase();
   const verdictFilter = verdictSelect.value;
   const actionFilter = actionSelect.value;
 
+  console.log('Filtrage:', { 
+    search, 
+    verdictFilter, 
+    actionFilter, 
+    totalFlows: flows.length 
+  });
+
   const filtered = flows.filter(f => {
+    // IMPORTANT: utiliser src_ip et dst_ip (noms MySQL)
     const matchSearch =
       !search ||
-      (f.source_ip && f.source_ip.toLowerCase().includes(search)) ||
-      (f.destination_ip && f.destination_ip.toLowerCase().includes(search)) ||
-      String(f.source_port || '').includes(search) ||
-      String(f.destination_port || '').includes(search) ||
+      (f.src_ip && f.src_ip.toLowerCase().includes(search)) ||
+      (f.dst_ip && f.dst_ip.toLowerCase().includes(search)) ||
+      String(f.src_port || '').includes(search) ||
+      String(f.dst_port || '').includes(search) ||
       (f.verdict && f.verdict.toLowerCase().includes(search)) ||
       (f.action && f.action.toLowerCase().includes(search));
 
@@ -56,34 +77,33 @@ function renderFlows(flows) {
     return matchSearch && matchVerdict && matchAction;
   });
 
+  console.log('Flows filtrés:', filtered.length);
+
   flowsBody.innerHTML = '';
 
   if (!filtered.length) {
-    flowsBody.innerHTML =
-      '<tr><td colspan="8" class="empty">Aucun flux trouvé.</td></tr>';
+    const message = flows.length === 0 
+      ? 'Aucun flux dans la base de données.' 
+      : 'Aucun flux ne correspond aux critères de recherche.';
+    flowsBody.innerHTML = `<tr><td colspan="8" class="empty">${message}</td></tr>`;
     return;
   }
 
   filtered.forEach(f => {
     const tr = document.createElement('tr');
-
-    let ts = f.timestamp || f.Timestamp || '';
-    try {
-      const d = new Date(ts * 1000);
-      if (!isNaN(d.getTime())) ts = d.toLocaleString();
-      else {
-        const d2 = new Date(ts);
-        if (!isNaN(d2.getTime())) ts = d2.toLocaleString();
-      }
-    } catch {}
+    
+    // Ajouter classe 'ddos-row' si verdict = DDoS
+    if (f.verdict && f.verdict.toLowerCase() === 'ddos') {
+      tr.classList.add('ddos-row');
+    }
 
     tr.innerHTML = `
-      <td>${ts}</td>
-      <td>${f.source_ip || f["Source IP"] || '-'}</td>
-      <td>${f.destination_ip || f["Destination IP"] || '-'}</td>
-      <td>${f.source_port || f["Source Port"] || '-'}</td>
-      <td>${f.destination_port || f["Destination Port"] || '-'}</td>
-      <td>${f.verdict || '-'}</td>
+      <td>${formatTimestamp(f.timestamp)}</td>
+      <td>${f.src_ip || '-'}</td>
+      <td>${f.dst_ip || '-'}</td>
+      <td>${f.src_port || '-'}</td>
+      <td>${f.dst_port || '-'}</td>
+      <td><strong>${f.verdict || '-'}</strong></td>
       <td>${formatProbability(f.probability)}</td>
       <td>${f.action || '-'}</td>
     `;
@@ -93,6 +113,7 @@ function renderFlows(flows) {
 }
 
 async function chargerEtAfficher() {
+  console.log('Chargement des flows...');
   const flows = await fetchFlows();
   renderFlows(flows);
 }

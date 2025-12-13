@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import time
 from scapy.all import sniff, IP, TCP, UDP
-from .flow_parser import FlowParser
+from capture.flow_parser import FlowParser
 
 class RealtimeCapture:
 

@@ -2,12 +2,28 @@
 import subprocess
 import json
 import sys
+import os
+import mysql.connector
 from capture.realtime_capture import RealtimeCapture
 
+# ======================================================================
+# CONFIGURATION MYSQL (SANS FLASK)
+# ======================================================================
+
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.getenv("DB_HOST", "localhost"),
+        port=int(os.getenv("DB_PORT", 3306)),
+        user=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", ""),
+        database=os.getenv("DB_DATABASE", "ddos_detection"),
+        autocommit=True
+    )
 
 # ======================================================================
-# LISTE DES FEATURES CICFlowMeter (87 colonnes)
+# FEATURES CICFlowMeter (DOIT MATCHER LE MODELE)
 # ======================================================================
+
 CICFLOWMETER_FEATURES = [
     "Unnamed: 0","Flow ID","Source IP","Source Port","Destination IP","Destination Port",
     "Protocol","Timestamp","Flow Duration","Total Fwd Packets","Total Backward Packets",
@@ -30,23 +46,26 @@ CICFLOWMETER_FEATURES = [
     "Idle Std","Idle Max","Idle Min","SimillarHTTP","Inbound"
 ]
 
+# ======================================================================
+# NORMALISATION DES FEATURES
+# ======================================================================
 
-# ======================================================================
-# NORMALISATION
-# ======================================================================
 def normalize_flow_dict(flow):
     return {col: flow.get(col, 0) for col in CICFLOWMETER_FEATURES}
 
+# ======================================================================
+# ORCHESTRATEUR
+# ======================================================================
 
-# ======================================================================
-# ORCHESTRATEUR 
-# ======================================================================
-class OrchestratorPredictionV2:
+class OrchestratorPrediction:
 
     def __init__(self, interface="wlp2s0"):
         self.interface = interface
         self.capture = RealtimeCapture(interface=self.interface)
         self.capture.flow_callback = self.handle_flow
+
+        print("[OK] Orchestrateur initialisé")
+        print(f"[OK] Interface réseau : {self.interface}")
 
     # ------------------------------------------------------------------
     def handle_flow(self, flow_features):
@@ -54,17 +73,14 @@ class OrchestratorPredictionV2:
         normalized = normalize_flow_dict(flow_features)
         json_input = json.dumps(normalized)
 
-        # cmd = [
-        #     "/home/ing/amomo_venv/bin/python3",
-        #     "inference/predict.py",
-        #     "--json", json_input
-        # ]
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
         cmd = [
             sys.executable,
-            "inference/predict.py",
-            "--json", json_input
+            os.path.join(BASE_DIR, "inference/predict.py"),
+            "--json",
+            json_input
         ]
-
 
         try:
             result = subprocess.run(
@@ -83,63 +99,79 @@ class OrchestratorPredictionV2:
 
             prediction_json = json.loads(result.stdout)
 
-            threshold = prediction_json.get("threshold", None)
-
             pred_entry = prediction_json["results"][0]
 
             verdict = pred_entry["verdict"]
             probability = pred_entry["probability"]
-            pred_int = pred_entry["prediction"]
+            prediction = pred_entry["prediction"]
+            threshold = prediction_json.get("threshold")
 
-            # Action dictée par le modèle (pas ton orchestrateur)
-            action = "Blocked" if pred_int == 1 else "Passed"
+            action = "Blocked" if prediction == 1 else "Passed"
 
-            packet_web_ready = {
+            packet = {
                 "src_ip": flow_features.get("Source IP"),
                 "dst_ip": flow_features.get("Destination IP"),
                 "src_port": flow_features.get("Source Port"),
                 "dst_port": flow_features.get("Destination Port"),
-                "prediction": pred_int,
+                "prediction": prediction,
                 "verdict": verdict,
                 "probability": probability,
                 "threshold": threshold,
                 "action": action
             }
 
-            print("\n=== PACKET ===")
-            print(json.dumps(packet_web_ready, indent=4))
+            print("\n=== FLOW ===")
+            print(json.dumps(packet, indent=4))
 
-            # --- Enregistrement DB ---
-            try:
-                from database.database import insert_flow
-                insert_flow(packet_web_ready)
-                print("[DB] Flow enregistré en base.")
-            except Exception as e:
-                print(f"[DB ERROR] Impossible d'enregistrer le flow : {e}")
-
-            # print("\n=== UI OUTPUT ===")
-            # print(json.dumps({
-            #     "source_ip": packet_web_ready["source_ip"],
-            #     "destination_ip": packet_web_ready["destination_ip"],
-            #     "source_port": packet_web_ready["source_port"],
-            #     "destination_port": packet_web_ready["destination_port"],
-            #     "verdict": verdict,
-            #     "probability": probability,
-            #     "action": action
-            # }, indent=2))
+            self.insert_flow_db(packet)
 
         except Exception as e:
-            print("ERREUR lors de l'appel predict.py:", e)
+            print("ERREUR orchestrateur :", e)
+
+    # ------------------------------------------------------------------
+    def insert_flow_db(self, packet):
+
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute(
+                """
+                INSERT INTO flows
+                (timestamp, src_ip, dst_ip, src_port,
+                 dst_port, prediction, verdict, probability, threshold, action)
+                VALUES (NOW(), %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    packet["src_ip"],
+                    packet["dst_ip"],
+                    packet["src_port"],
+                    packet["dst_port"],
+                    packet["prediction"],
+                    packet["verdict"],
+                    packet["probability"],
+                    packet["threshold"],
+                    packet["action"]
+                )
+            )
+
+            cur.close()
+            conn.close()
+
+            print("[DB] Flow enregistré")
+
+        except Exception as e:
+            print("[DB ERROR]", e)
 
     # ------------------------------------------------------------------
     def start(self):
-        print(f"--- ORCHESTRATEUR V2 EN MARCHE SUR : {self.interface} ---")
+        print(f"\n--- ORCHESTRATEUR EN MARCHE SUR {self.interface} ---\n")
         self.capture.start()
-
 
 # ======================================================================
 # MAIN
 # ======================================================================
+
 if __name__ == "__main__":
-    orch = OrchestratorPredictionV2("wlp2s0")
+    orch = OrchestratorPrediction(interface="wlp2s0")
     orch.start()

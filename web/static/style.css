@@ -123,6 +123,21 @@ button:hover {
 }
 
 /* =========================================================
+   INTRO
+========================================================= */
+.intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* =========================================================
    TABLES
 ========================================================= */
 table {
@@ -147,6 +162,21 @@ th, td {
 
 tbody tr:nth-child(even) {
   background: #fbfdff;
+}
+
+/* ✅ LIGNES DDoS EN ROUGE */
+tbody tr.ddos-row {
+  background-color: #fee2e2 !important;
+  border-left: 4px solid #dc2626;
+}
+
+tbody tr.ddos-row:hover {
+  background-color: #fecaca !important;
+}
+
+tbody tr.ddos-row td {
+  color: #7f1d1d;
+  font-weight: 500;
 }
 
 .empty {

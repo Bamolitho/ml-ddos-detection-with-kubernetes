@@ -1,4 +1,3 @@
-# database.py
 import MySQLdb.cursors
 import os
 
@@ -45,6 +44,7 @@ def init_db():
         
         mysql_instance.connection.commit()
         cur.close()
+        print("[DB] Table 'flows' créée ou déjà existante.")
     except Exception as e:
         print(f"[DB ERROR] Erreur lors de la création de la table flows : {e}")
 
@@ -52,6 +52,7 @@ def init_db():
 def execute_query(query, params=(), fetch=False):
     """Exécute une requête SQL générique"""
     if mysql_instance is None:
+        print("[DB ERROR] MySQL n'est pas initialisé.")
         return [] if fetch else None
     
     try:
@@ -72,39 +73,44 @@ def execute_query(query, params=(), fetch=False):
 
 def insert_flow(flow):
     """
-    Insère dans la DB un flow web-ready venant de l’orchestrateur :
+    Insère dans la DB un flow venant de l'orchestrateur :
     {
-        "src_ip": "...",
-        "dst_ip": "...",
-        "src_port": 1234,
+        "src_ip": "192.168.1.81",
+        "dst_ip": "142.250.69.106",
+        "src_port": 42800,
         "dst_port": 443,
         "prediction": 0,
         "verdict": "Benign",
-        "probability": 0.98,
-        "threshold": 0.50,
+        "probability": 0.0002854558697436005,
+        "threshold": 0.11374477,
         "action": "Passed"
     }
     """
     query = '''
         INSERT INTO flows (src_ip, dst_ip, src_port, dst_port, prediction, verdict, probability, threshold, action)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
     params = (
-        flow["src_ip"],
-        flow["dst_ip"],
-        flow["src_port"],
-        flow["dst_port"],
-        flow["prediction"],
-        flow["verdict"],
-        flow["probability"],
-        flow["threshold"],
-        flow["action"],
+        flow.get("src_ip"),
+        flow.get("dst_ip"),
+        flow.get("src_port"),
+        flow.get("dst_port"),
+        flow.get("prediction"),
+        flow.get("verdict"),
+        flow.get("probability"),
+        flow.get("threshold"),
+        flow.get("action"), 
     )
-    execute_query(query, params)
+    try:
+        execute_query(query, params)
+        print(f"[DB] Flow enregistré: {flow.get('src_ip')} → {flow.get('dst_ip')} ({flow.get('verdict')})")
+    except Exception as e:
+        print(f"[DB ERROR] Erreur insertion flow : {e}")
+        print(f"[DB ERROR] Flow problématique : {flow}")
 
 
 def get_last_flows(limit=100):
-    """Retourne les derniers flows pour l’interface web"""
+    """Retourne les derniers flows pour l'interface web"""
     query = "SELECT * FROM flows ORDER BY timestamp DESC LIMIT %s"
     return execute_query(query, (limit,), fetch=True)
 
@@ -113,4 +119,5 @@ def ensure_db_initialized():
     """Initialisation automatique"""
     if mysql_instance is not None:
         init_db()
-
+    else:
+        print("[DB WARNING] MySQL instance non disponible pour l'initialisation.")

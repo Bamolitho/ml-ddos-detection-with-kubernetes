@@ -1,0 +1,10 @@
+scapy
+mysql-connector-python
+numpy
+pandas
+joblib
+scikit-learn==1.6.1
+PyYAML
+xgboost
+mysqlclient
+flask
