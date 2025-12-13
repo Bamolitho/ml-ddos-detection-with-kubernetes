@@ -1,0 +1,21 @@
+# ==== API ====
+Flask==3.0.0
+
+# ==== Base de données ====
+Flask-MySQLdb==2.0.0
+mysqlclient==2.2.0
+
+
+# ==== Visualisation ====
+
+# ==== Traitement Excel/CSV (si besoin) ====
+openpyxl  # lecture de fichiers .xlsx
+
+# ==== HASH PASSWORD ====
+bcrypt==4.1.2
+
+
+# ==== Autres ====
+argparse  # utile pour les scripts CLI
+python-dotenv==1.0.0
+Werkzeug==3.0.1

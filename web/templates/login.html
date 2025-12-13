@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion - Système Bancaire</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h2>Connexion</h2>
+
+    <!-- Bloc de messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-message {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+      <input 
+        type="text" 
+        name="username" 
+        placeholder="Nom d'utilisateur" 
+        required 
+        value="{{ request.form.username }}"
+      >
+      
+      <div class="password-container">
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          placeholder="Mot de passe" 
+          required
+        >
+        <button type="button" class="toggle-password">👁️</button>
+      </div>
+
+      <button type="submit">Se connecter</button>
+    </form>
+
+    <p>Pas de compte ? <a href="{{ url_for('register') }}">S'inscrire</a></p>
+  </main>
+
+  <script>
+    const toggleBtn = document.querySelector('.toggle-password');
+    const passwordInput = document.getElementById('password');
+    
+    toggleBtn.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      toggleBtn.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+  </script>
+</body>
+</html>

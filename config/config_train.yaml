@@ -163,6 +163,11 @@ hyperparameters:
     # n_jobs : -1 = tous les coeurs
     n_jobs: -1
 
+    # A AJOUTER DANS .py -- Critiques pour   viter les splits impossibles
+    min_data_in_leaf: 10
+    min_gain_to_split: 0.0
+    max_bin: 511
+
 
   catboost:
     # iterations : int

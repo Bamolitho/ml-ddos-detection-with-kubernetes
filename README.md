@@ -84,3 +84,7 @@ project/
 └── README.md
 
 ```
+
+Lancer l'orchestrateur comme ça : 
+
+sudo -E /home/ing/amomo_venv/bin/python3 orchestrator_prediction.py

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Monitoring Flux - Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Monitoring Flux - Dashboard</h1>
+      <div style="font-size:12px; color:#6b7280;">
+        Connecté en tant que : <strong>{{ session.username }}</strong>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <a href="{{ url_for('calculer_stats') }}"><button>Statistiques</button></a>
+      <a href="{{ url_for('changer_mot_de_passe') }}"><button>Changer mot de passe</button></a>
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('logout') }}"><button class="btn-outline">Se déconnecter</button></a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-message {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="intro">
+      <div>
+        <h2>Flux réseau en temps réel</h2>
+        <p style="color:#6b7280; margin:4px 0 0 0;">
+          Surveillez les flux détectés par le moteur d'inférence.
+        </p>
+      </div>
+
+      <div style="text-align:right;">
+        <div style="font-size:12px; color:#6b7280;">
+          Mise à jour automatique toutes les 5s
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres & Export -->
+    <div class="controls" role="region" aria-label="Filtres et actions">
+      <input type="text" id="searchInput" placeholder="Rechercher IP, port, verdict..." />
+
+      <select id="verdictSelect">
+        <option value="">-- Filtrer par verdict --</option>
+        <option value="DDoS">DDoS</option>
+        <option value="Benign">Benign</option>
+      </select>
+
+      <select id="actionSelect">
+        <option value="">-- Filtrer par action --</option>
+        <option value="Blocked">Blocked</option>
+        <option value="Passed">Passed</option>
+      </select>
+
+      <button id="applyBtn">APPLIQUER</button>
+      <button id="resetBtn" class="btn-outline">RESET</button>
+
+      <div class="export">
+        <a href="{{ url_for('export_flows_csv') }}"><button>Exporter CSV</button></a>
+        <a href="{{ url_for('export_flows_json') }}"><button class="btn-outline">Exporter JSON</button></a>
+      </div>
+    </div>
+
+    <!-- Table des flux -->
+    <section class="alerts">
+      <h3 class="section-title">Historique récent des flux</h3>
+
+      <table id="flowsTable" aria-live="polite">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>IP source</th>
+            <th>IP destination</th>
+            <th>Port source</th>
+            <th>Port destination</th>
+            <th>Verdict</th>
+            <th>Probabilité</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="flowsBody">
+          <tr>
+            <td colspan="8" class="empty">Chargement des flux...</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Zone de danger -->
+    <div class="danger-zone">
+      <h3>Zone utilisateur</h3>
+      <p>
+        La suppression de votre compte est irréversible.
+        Toutes les données associées seront supprimées.
+      </p>
+      <button class="btn-danger" onclick="showDeleteModal()">
+        Supprimer mon compte
+      </button>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 Monitoring - Tous droits réservés</p>
+  </footer>
+
+  <!-- Modal suppression -->
+  <div id="confirmDeleteModal">
+    <div class="modal-content">
+      <h3>Confirmer la suppression</h3>
+      <p>
+        Cette action est irréversible.
+        Veuillez entrer votre mot de passe pour confirmer.
+      </p>
+      <form method="POST" action="{{ url_for('supprimer_compte') }}">
+        <input type="password" name="password" placeholder="Mot de passe" required />
+        <div class="modal-buttons">
+          <button type="button" onclick="hideDeleteModal()">Annuler</button>
+          <button type="submit" class="btn-danger">Confirmer la suppression</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JS séparé -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

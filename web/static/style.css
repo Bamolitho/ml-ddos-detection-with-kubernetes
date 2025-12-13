@@ -1,0 +1,251 @@
+/* =========================================================
+   RESET & BASE
+========================================================= */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f8fafc;
+  color: #111827;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* =========================================================
+   LAYOUT GLOBAL
+========================================================= */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+footer {
+  margin-top: 32px;
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* =========================================================
+   TITRES
+========================================================= */
+h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.section-title {
+  margin: 16px 0 8px;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+/* =========================================================
+   BOUTONS
+========================================================= */
+button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.btn-outline {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+
+.btn-outline:hover {
+  background: #f1f5f9;
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* =========================================================
+   CONTROLS / FILTRES
+========================================================= */
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.controls input,
+.controls select {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.export {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+/* =========================================================
+   TABLES
+========================================================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+thead {
+  background: #f1f5f9;
+}
+
+th, td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+}
+
+tbody tr:nth-child(even) {
+  background: #fbfdff;
+}
+
+.empty {
+  text-align: center;
+  padding: 16px;
+  color: #6b7280;
+}
+
+/* =========================================================
+   FLASH MESSAGES
+========================================================= */
+.flash-message {
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.flash-message.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #bbf7d0;
+}
+
+.flash-message.error {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecaca;
+}
+
+/* =========================================================
+   ZONE DE DANGER
+========================================================= */
+.danger-zone {
+  margin-top: 24px;
+  padding: 16px;
+  background: #fff7f7;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+}
+
+.danger-zone h3 {
+  margin-top: 0;
+  color: #b91c1c;
+}
+
+/* =========================================================
+   FORMULAIRES
+========================================================= */
+form input,
+form select {
+  width: 100%;
+  padding: 8px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+#confirmDeleteModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+#confirmDeleteModal .modal-content {
+  background: #ffffff;
+  padding: 20px;
+  width: 320px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(2, 6, 23, 0.1);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .export {
+    margin-left: 0;
+  }
+
+  table {
+    font-size: 12px;
+  }
+}

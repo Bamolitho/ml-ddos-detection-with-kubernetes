@@ -2,6 +2,12 @@ Le jeu de données utilisé est CICDDoS2019. Celui-ci provient du site web acces
 
 Dataset : [dataset](http://cicresearch.ca/CICDataset/CICDDoS2019/Dataset/)
 
+wget http://cicresearch.ca/CICDataset/CICDDoS2019/Dataset/CSVs/CSV-01-12.zip
+
+ou 
+
+curl -O http://cicresearch.ca/CICDataset/CICDDoS2019/Dataset/CSVs/CSV-01-12.zip
+
 Ce jeu de données réuni les deux grandes catégories d'attaques DDoS : Reflection-based et exploitation-based attacks.
 ![DDoS Taxonomy](../Images/ddostaxonomy.png)
 

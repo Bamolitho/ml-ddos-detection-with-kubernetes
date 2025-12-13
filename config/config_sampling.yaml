@@ -1,11 +1,14 @@
 dataset:
   input_path: "../data/raw/merged_datasets.csv" 
   output_path: "../data/raw/merged_balanced.csv"
-  chunk_size: 400000
+  chunk_size: 100000
   random_seed: 42
 
 sampling:
   benign_keep: 1.0
+
+  # Paramètre pour le streaming (important)
+  ddos_keep_prob: 0.01      # <-- garde ~1% des DDoS
 
   # Catégorisation automatique selon la taille de chaque classe
   rules:

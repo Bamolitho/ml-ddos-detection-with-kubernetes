@@ -1,0 +1,36 @@
+inference:
+  # Active/désactive complètement la lecture de la config
+  enable_config: true
+
+  # =============================
+  # → Entrée de prédiction
+  # =============================
+
+  # Si true → on utilise input_file (ci-dessous)
+  # Si false → on ignore input_file et on passe au fallback (test.csv)
+  use_static_input_file: true
+
+  # Fichier d’entrée pour les prédictions
+  input_file: "data/processed/test.csv"
+
+
+  # =============================
+  # → Labels (optionnels, pour évaluer)
+  # =============================
+
+  # Si true → label_file est utilisé
+  # Si false → fallback (test_labels.csv si présent)
+  use_static_label_file: true
+
+  # Fichier contenant les labels
+  label_file: "data/processed/test_labels.csv"
+
+
+  # =============================
+  # → Modèle à charger par défaut
+  # =============================
+  model_name: "xgboost"
+
+  # Si true → on utilise model_name (YAML)
+  # Si false → on laisse l'utilisateur choisir en CLI
+  use_static_model_name: xgboost
