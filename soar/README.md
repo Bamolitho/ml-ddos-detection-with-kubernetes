@@ -476,3 +476,72 @@ INSERT INTO flows (action = decision)
 CAPTURE → ML → ORCHESTRATEUR → SOAR → ACTION → DB
 ```
 
+
+
+Insertion sql manuelle (pour test & validation)
+
+```bash
+docker exec -it mysql_db sh
+mysql -u bank_user -p # entrez password
+```
+
+```mysql
+use ddos_detection;
+```
+
+Un vrai positif
+
+```mysql
+INSERT INTO flows (
+    timestamp,
+    src_ip,
+    dst_ip,
+    src_port,
+    dst_port,
+    prediction,
+    verdict,
+    probability,
+    threshold,
+    action
+) VALUES (
+    NOW(),
+    '8.8.8.8',
+    '192.168.1.81',
+    443,
+    443,
+    1,
+    'DDoS',
+    0.98,
+    0.11,
+    'Blocked'
+);
+```
+
+Un faux négatif
+
+```mysql
+INSERT INTO flows (
+    timestamp,
+    src_ip,
+    dst_ip,
+    src_port,
+    dst_port,
+    prediction,
+    verdict,
+    probability,
+    threshold,
+    action
+) VALUES (
+    NOW(),
+    '8.8.8.8',
+    '192.168.1.81',
+    443,
+    443,
+    1,
+    'Benign',
+    0.98,
+    0.11,
+    'Blocked'
+);
+```
+

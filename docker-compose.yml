@@ -9,6 +9,8 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      -  .env
     command:
       [
         "--default-time-zone=America/Montreal",
@@ -35,11 +37,13 @@ services:
     container_name: dashboard
     restart: always
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       DB_DATABASE: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      -  .env
     ports:
       - "5500:5500"
     depends_on:
@@ -50,6 +54,12 @@ services:
     volumes:
       - ./web:/web
       - ./database:/web/database
+    healthcheck:  
+      test: ["CMD-SHELL", "curl -f http://localhost:5500/dashboard || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 # -- Service 3 : Orchestrateur de prédiction --
   orchestrator:
