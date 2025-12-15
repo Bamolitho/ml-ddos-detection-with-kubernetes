@@ -11,6 +11,18 @@ Ce projet couvre **toute la chaîne** :
 
 ---
 
+## Prérequis
+
+Créer les fichiers nécessaires et adaptez les : .env et k8s/base/secret.yaml
+Pour ce faire, lancer le script prerequis.sh
+
+```bash
+chmod +x prerequis.sh
+./prerequis.sh
+```
+
+Ces fichiers seront automatiquement créez, il faudra juste adapter ces contenus.
+
 ## Démonstration visuelle (captures)
 
 ### Architecture cible
