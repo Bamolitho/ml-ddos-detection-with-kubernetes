@@ -151,6 +151,23 @@ La documentation complète est centralisée ici :
 
 Chaque sous-composant dispose de son propre `README.md`.
 
+## Lancer le projet
+
+Juste executer les scripts suivants
+
+```bash
+./install_kubernetes_env.sh # Installer l'environnement minikube
+./run_system_k8s.sh # Démarre tout
+```
+
+## Arreter le projet
+
+ctrl + c && executer le script
+
+```bash
+./delete_images_pods_svc.sh # Supprimer les images, les pods, les services, minikube, etc.
+```
+
 ---
 
 ## Public cible
