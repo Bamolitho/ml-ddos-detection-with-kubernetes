@@ -156,6 +156,10 @@ Sources principales :
 - [`nginx/README.md`](../nginx/README.md)
 - [`k8s/base/secret.yaml`](../k8s/base/secret.yaml)
 
+### Les modèles stockées
+
+📄 [`models.md`](../models/README.md)
+
 ---
 
 ### Références & annexes
@@ -165,16 +169,6 @@ Sources principales :
 - Outils utilisés
 - Publications associées
 - Liens externes
-
----
-
-## Public cible
-
-- Étudiants / chercheurs
-- Ingénieurs sécurité
-- Ingénieurs ML
-- DevOps / SRE
-- Évaluateurs académiques
 
 ---
 

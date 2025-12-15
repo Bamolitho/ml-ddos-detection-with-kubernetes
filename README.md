@@ -24,10 +24,12 @@ Ce projet couvre **toute la chaîne** :
 
 ![Dashboard](Images/dashboard.png)
 
-### Performances des modèles
+### Performances des modèles (en production)
 ![Performance](Images/performance.png)
 
----
+### Heatmap modèles (sur données de test)
+
+![Heatmap de performance des modèles ML](./evaluate/dashboard/heatmap_performance.png)
 
 ## Objectifs du projet
 
