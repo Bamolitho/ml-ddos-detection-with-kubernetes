@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: soar
+  name: mysql
 spec:
   selector:
-    app: soar
+    app: mysql
   ports:
-    - port: 6000
-      targetPort: 6000
+    - port: 3306
+      targetPort: 3306
   type: ClusterIP

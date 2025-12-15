@@ -4,13 +4,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import csv
 import io
 import json
-import sys
+#import sys
 import os
 import requests
 from datetime import datetime
 
 # Import du module database
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../database')))
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../database')))
 from database.database import init_mysql, ensure_db_initialized
 
 app = Flask(__name__)
@@ -31,8 +31,14 @@ mysql = MySQL(app)
 
 # Initialiser le module database avec l'instance MySQL
 with app.app_context():
-    init_mysql(mysql)
-    ensure_db_initialized()
+    try:
+        init_mysql(mysql)
+        ensure_db_initialized()
+    except Exception as e:
+        print("[DB DISABLED]", e)
+
+    # init_mysql(mysql)
+    # ensure_db_initialized()
 
 # =============================
 # PAGE DE LOGIN
@@ -356,6 +362,13 @@ def notify_soar(flow):
         print(f"[SOAR] Notification envoyée : {response.status_code}")
     except Exception as e:
         print(f"[SOAR] Erreur notification: {e}")
+
+# =============================
+# HEALTH CHECK
+# =============================
+@app.route("/health")
+def health():
+    return "ok", 200
 
 # =============================
 # MAIN

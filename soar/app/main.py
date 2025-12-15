@@ -100,10 +100,13 @@ def alert():
     # --- BLOCKING ---
     if BLOCKING_METHOD == "iptables":
         success = block_ip(src_ip)
+    elif BLOCKING_METHOD == "log":
+        logger.warning(f"[DEV] DDoS détecté sur {src_ip}")
+        success = True
     else:
         logger.error(f"Unknown blocking method: {BLOCKING_METHOD}")
         return jsonify({"status": "failed"}), 500
-
+    
     if success:
         msg = (
             "🚨 IP BLOQUÉE 🚨\n\n"

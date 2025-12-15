@@ -1,7 +1,11 @@
 FROM python:3.10-slim
 
-RUN apt update && apt install -y iptables && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    iptables \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /var/log/soar
+
 
 WORKDIR /soar
 

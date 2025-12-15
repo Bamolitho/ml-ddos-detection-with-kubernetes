@@ -1,131 +1,177 @@
-## **Workflow d’entraînement**
+# ML-based DDoS Detection with Kubernetes & SOAR
 
-```LESS
-     ┌────────────────────────────────────────┐
-     │        1. Chargement du dataset        │
-     │           (merged_dataset.csv)         │
-     └────────────────────────────────────────┘
-                         │
-                         ▼
-     ┌────────────────────────────────────────┐
-     │     2. Pipeline de prétraitement       │
-     │ (StandardScaler, OneHotEncoding, PCA,  │
-     │                ICA)                    │
-     │ → Entraîné et sauvegardé (.pkl)        │
-     └────────────────────────────────────────┘
-                         │
-                         ▼
-     ┌────────────────────────────────────────┐
-     │ 3. Transformation complète du dataset  │
-     │    via le pipeline_preprocessing.pkl   │
-     └────────────────────────────────────────┘
-                         │
-                         ▼
-     ┌────────────────────────────────────────┐
-     │       4. Entraînement du modèle        │
-     │     Decision Tree (class_weight)       │
-     └────────────────────────────────────────┘
-                         │
-                         ▼
-     ┌────────────────────────────────────────┐
-     │      5. Évaluation et métriques        │
-     │  (precision, recall, f1, confusion...) │
-     └────────────────────────────────────────┘
-                         │
-                         ▼
-     ┌────────────────────────────────────────┐
-     │     6. Sauvegarde du modèle (.pkl)     │
-     └────────────────────────────────────────┘
-```
+Projet complet de **détection et réponse automatique aux attaques DDoS**, basé sur le **Machine Learning**, déployé sur **Kubernetes**, avec un composant **SOAR** pour la décision et l’action en temps réel.
 
+Ce projet couvre **toute la chaîne** :
+- collecte du trafic réseau
+- preprocessing et entraînement ML
+- inférence temps réel
+- orchestration et réponse automatique
+- visualisation et traçabilité
 
+---
 
-```bash
-project/
-│
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── splits/               # X_train, X_test, etc.
-│
-├── models/
-│   ├── saved/                # modèles finaux, threshold, scaler, etc.
-│   └── tuned/                # résultats tuning (GridSearch/RandomSearch)
-│
-├── src/
-│   ├── preprocessing/
-│   │   └── preprocess.py
-│   │
-│   ├── train/
-│   │   └── train.py          # Entraînement DT / RF
-│   │
-│   ├── evaluate/
-│   │   └── evaluate.py       # Toutes les métriques + benchmark + rapport
-│   │
-│   ├── inference/
-│   │   └── predict.py        # Inférence production + threshold optimal
-│   │
-│   ├── tuning/
-│   │   └── tune.py           # GridSearch / RandomSearch
-│   │
-│   ├── dashboard/
-│   │   └── dashboard.py      # Dashboard automatique (Streamlit)
-│   │
-│   └── utils/
-│       ├── io.py             # load/save helpers
-│       ├── metrics.py        # fonctions métriques
-│       └── plotting.py       # courbes ROC / confusion / etc.
-│
-├── reports/
-│   ├── evaluation_report.html
-│   └── benchmark.json
-│
-├── requirements.txt
-└── README.md
+## Démonstration visuelle (captures)
 
-```
+### Architecture cible
+![Architecture globale](Images/architecture_cible.svg)
 
-Lancer l'orchestrateur comme ça : 
+### Orchestrateur & flux SOAR
+![Orchestrator](Images/orchestrator.png)
 
-sudo -E /home/ing/amomo_venv/bin/python3 orchestrator_prediction.py
-sudo -E /home/ing/amomo_venv/bin/python3 -m capture.orchestrator_prediction
+### Dashboard temps réel
+![Dashboard overview](Images/dashboard_overview.png)
 
+![Dashboard](Images/dashboard.png)
 
+### Performances des modèles
+![Performance](Images/performance.png)
 
-```less
-[ Orchestrator Worker ]
-        |
-        | INSERT
-        v
-     [ MySQL ]
-        ^
-        | SELECT
-[ Flask Dashboard ] ---> [ Nginx ] ---> Browser
-```
+---
 
-```less
-┌────────────┐
-│ Orchestrator│───► MySQL ◄─── Dashboard
-│ (scapy + ML)│
-└────────────┘
-        │
-        ▼
-   Trafic réseau réel
+## Objectifs du projet
 
-```
+- Détecter automatiquement des attaques DDoS à partir du trafic réseau
+- Utiliser des modèles ML robustes et généralisables
+- Déployer une architecture réaliste orientée microservices
+- Mettre en place une réponse automatique (blocage + alertes)
+- Fournir une traçabilité complète pour analyse et audit
 
-```less
-[ Orchestrator ]
-      |
-      | INSERT
-      ▼
-    MySQL
-      ▲
-      | SELECT (toutes les 5s)
-[ Flask API ]  ←  GET /flows_json
-      ▲
-      |
-[ Browser JS ]
+---
 
-```
+## Architecture générale
 
+- Capture réseau temps réel
+- Reverse proxy Nginx
+- Inférence ML
+- SOAR (décision + action)
+- Base de données MySQL
+- Dashboard web
+- Déploiement Kubernetes avec Kustomize
+
+Documentation détaillée :  
+📄 [`docs/architecture.md`](docs/architecture.md)
+
+---
+
+## Pipeline Machine Learning
+
+1. Préparation et fusion des datasets
+2. Équilibrage binaire (Benign vs DDoS)
+3. Preprocessing reproductible
+4. Entraînement multi-modèles
+5. Tuning optionnel
+6. Sauvegarde des modèles
+
+Documentation :  
+📄 [`docs/ml_pipeline.md`](docs/ml_pipeline.md)
+
+Scripts clés :
+- [`run_pipeline_ML.sh`](run_pipeline_ML.sh)
+- [`preprocessed_data/`](preprocessed_data/)
+- [`train/`](train/)
+- [`tuning/`](tuning/)
+
+---
+
+## Détection & inférence temps réel
+
+- Application du même pipeline de preprocessing
+- Chargement des modèles entraînés
+- Prédictions avec probabilités
+- Seuils configurables
+
+Documentation :  
+📄 [`docs/inference.md`](docs/inference.md)
+
+---
+
+## SOAR — Réponse automatique
+
+Le composant SOAR :
+- reçoit les prédictions
+- applique des règles de décision
+- déclenche des actions (blocage / autorisation)
+- envoie des alertes Telegram
+- gère une whitelist
+
+Documentation :  
+📄 [`docs/soar.md`](docs/soar.md)
+
+Tests :
+- [`test_soar_scenarios.sh`](test_soar_scenarios.sh)
+
+---
+
+## Base de données & traçabilité
+
+- Historique complet des flux analysés
+- Décisions et actions associées
+- Support dashboard et audit
+
+Documentation :  
+📄 [`docs/database.md`](docs/database.md)
+
+---
+
+## Kubernetes & déploiement
+
+- Manifests Kubernetes
+- Kustomize (base / dev / prod)
+- Services, pods, secrets, configmaps
+- Déploiement automatisé
+
+Documentation :  
+📄 [`docs/kubernetes.md`](docs/kubernetes.md)
+
+Scripts :
+- [`run_system_k8s.sh`](run_system_k8s.sh)
+- [`docker-compose.yml`](docker-compose.yml)
+
+---
+
+## Évaluation & performances
+
+- Benchmarks multi-modèles
+- Métriques ML classiques
+- Dashboards de performance
+- Visualisations graphiques
+
+Documentation :  
+📄 [`docs/evaluation.md`](docs/evaluation.md)
+
+---
+
+## Structure du projet
+
+La documentation complète est centralisée ici :  
+📁 [`docs/`](docs/)
+
+Chaque sous-composant dispose de son propre `README.md`.
+
+---
+
+## Public cible
+
+- Étudiants et chercheurs
+- Ingénieurs sécurité
+- Ingénieurs Machine Learning
+- DevOps / SRE
+- Évaluateurs académiques
+
+---
+
+## Perspectives
+
+- Détection multi-classes des attaques
+- Ajout de modèles deep learning
+- Extension SOAR (firewall externe, SIEM)
+- Apprentissage en ligne
+- Support multi-clusters Kubernetes
+
+---
+
+## Licence
+
+Projet distribué sous licence MIT.  
+Voir [`LICENSE`](LICENSE).

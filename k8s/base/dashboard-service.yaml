@@ -10,3 +10,10 @@ spec:
     - port: 5500
       targetPort: 5500
       protocol: TCP
+
+# spec:
+#   type: NodePort
+#   ports:
+#     - port: 5500
+#       targetPort: 5500
+#       nodePort: 31550

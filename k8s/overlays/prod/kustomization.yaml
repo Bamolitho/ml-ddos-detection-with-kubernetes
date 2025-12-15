@@ -6,10 +6,6 @@ patches:
       kind: ConfigMap
       name: flask-config
     patch: |-
-      apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: flask-config
       data:
         ENV: "production"
         DEBUG: "false"
@@ -18,9 +14,5 @@ patches:
       kind: Deployment
       name: flask-deployment
     patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: flask-deployment
       spec:
         replicas: 3

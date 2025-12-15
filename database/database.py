@@ -4,7 +4,7 @@ import os
 mysql_instance = None
 
 def init_mysql(mysql):
-    """Initialise la connexion MySQL depuis Flask"""
+    """Initialise la connexion MySQL depuis Flask-MySQLdb"""
     global mysql_instance
     mysql_instance = mysql
 
@@ -13,13 +13,30 @@ def get_db_connection():
     """Retourne la connexion MySQL depuis Flask-MySQLdb"""
     if mysql_instance is None:
         raise RuntimeError("MySQL n'est pas initialisé.")
-    return mysql_instance.connection
+    return mysql_instance.connection  
 
 
 def init_db():
-    """Création de la table flows pour le projet DDoS detection"""
+    """Création des tables users et flows"""
+    if mysql_instance is None:
+        print("[DB ERROR] MySQL n'est pas initialisé.")
+        return
+    
     try:
-        cur = mysql_instance.connection.cursor(MySQLdb.cursors.DictCursor)
+        cur = mysql_instance.connection.cursor()
+        
+        # Table users
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB
+            DEFAULT CHARSET=utf8mb4
+            COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Table flows
         cur.execute('''
             CREATE TABLE IF NOT EXISTS flows (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -44,9 +61,11 @@ def init_db():
         
         mysql_instance.connection.commit()
         cur.close()
-        print("[DB] Table 'flows' créée ou déjà existante.")
+        print("[DB] Tables 'users' et 'flows' créées ou déjà existantes.")
     except Exception as e:
-        print(f"[DB ERROR] Erreur lors de la création de la table flows : {e}")
+        print(f"[DB ERROR] Erreur lors de la création des tables : {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def execute_query(query, params=(), fetch=False):
@@ -56,7 +75,7 @@ def execute_query(query, params=(), fetch=False):
         return [] if fetch else None
     
     try:
-        cur = mysql_instance.connection.cursor(MySQLdb.cursors.DictCursor)
+        cur = mysql_instance.connection.cursor()
         cur.execute(query, params)
         mysql_instance.connection.commit()
 
@@ -72,20 +91,7 @@ def execute_query(query, params=(), fetch=False):
 
 
 def insert_flow(flow):
-    """
-    Insère dans la DB un flow venant de l'orchestrateur :
-    {
-        "src_ip": "192.168.1.81",
-        "dst_ip": "142.250.69.106",
-        "src_port": 42800,
-        "dst_port": 443,
-        "prediction": 0,
-        "verdict": "Benign",
-        "probability": 0.0002854558697436005,
-        "threshold": 0.11374477,
-        "action": "Passed"
-    }
-    """
+    """Insère un flow dans la base de données"""
     query = '''
         INSERT INTO flows (src_ip, dst_ip, src_port, dst_port, prediction, verdict, probability, threshold, action)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)

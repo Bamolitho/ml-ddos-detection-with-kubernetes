@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: soar
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: soar
@@ -12,26 +12,17 @@ spec:
       labels:
         app: soar
     spec:
-      hostNetwork: true
       containers:
         - name: soar
           image: ml-ddos-soar:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6000
-          envFrom:
-            - configMapRef:
-                name: soar-config
-            - secretRef:
-                name: soar-secrets
           securityContext:
             privileged: true
             capabilities:
               add:
                 - NET_ADMIN
-          volumeMounts:
-            - name: soar-logs
-              mountPath: /var/log/soar
-      volumes:
-        - name: soar-logs
-          emptyDir: {}
+          envFrom:
+            - secretRef:
+                name: app-secrets

@@ -54,11 +54,21 @@ def normalize_flow_dict(flow):
 # ======================================================================
 # ORCHESTRATOR
 # ======================================================================
-
 class OrchestratorPrediction:
 
-    def __init__(self, interface="wlp2s0"):
-        self.interface = interface
+    def __init__(self, interface=None):
+        # self.interface = interface or os.getenv("CAPTURE_INTERFACE", "eth0")
+# class OrchestratorPrediction:
+
+#     def __init__(self, interface="wlp2s0"):
+        # self.interface = interface
+        iface = os.getenv("CAPTURE_INTERFACE")
+
+        if iface in (None, "", "any"):
+            iface = None
+
+        self.interface = iface
+
         self.capture = RealtimeCapture(interface=self.interface)
         self.capture.flow_callback = self.handle_flow
 
@@ -200,5 +210,6 @@ class OrchestratorPrediction:
 # ======================================================================
 
 if __name__ == "__main__":
-    orch = OrchestratorPrediction(interface="wlp2s0")
+    # orch = OrchestratorPrediction(interface="wlp2s0")
+    orch = OrchestratorPrediction()
     orch.start()

@@ -1,3 +1,40 @@
+# apiVersion: apps/v1
+# kind: DaemonSet
+# metadata:
+#   name: orchestrator
+# spec:
+#   selector:
+#     matchLabels:
+#       app: orchestrator
+#   template:
+#     metadata:
+#       labels:
+#         app: orchestrator
+#     spec:
+#       containers:
+#         - name: orchestrator
+#           image: ml-ddos-orchestrator:latest
+#           imagePullPolicy: IfNotPresent
+#           securityContext:
+#             privileged: true
+#             capabilities:
+#               add:
+#                 - NET_RAW
+#                 - NET_ADMIN
+#           env:
+#             - name: CAPTURE_INTERFACE
+#               value: "any"
+
+#             - name: SOAR_URL
+#               value: "http://soar:6000/alert"
+
+#             - name: PYTHONUNBUFFERED
+#               value: "1"
+              
+#           envFrom:
+#             - secretRef:
+#                 name: app-secrets
+
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -12,6 +49,8 @@ spec:
         app: orchestrator
     spec:
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+
       containers:
         - name: orchestrator
           image: ml-ddos-orchestrator:latest
@@ -22,12 +61,13 @@ spec:
               add:
                 - NET_RAW
                 - NET_ADMIN
-          envFrom:
-            - configMapRef:
-                name: orchestrator-config
-            - secretRef:
-                name: orchestrator-secrets
           env:
+            - name: CAPTURE_INTERFACE
+              value: "eth0"   # ← ETH0 DU NODE
             - name: SOAR_URL
-              value: "http://127.0.0.1:6000/alert"
-
+              value: "http://soar:6000/alert"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          envFrom:
+            - secretRef:
+                name: app-secrets

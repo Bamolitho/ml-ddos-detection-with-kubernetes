@@ -1,334 +1,234 @@
-Le SOAR est l’autorité des notifications et des actions (passed/blocked/whitelist)
+# SOAR — Security Orchestration, Automation and Response
 
-# 1️⃣ Vue d’ensemble de l’architecture
+## Rôle du SOAR
+
+Le SOAR est **l’autorité finale des décisions de sécurité** du système de détection DDoS.
+
+Il reçoit des alertes du moteur de détection (ML / orchestrateur),  
+évalue la situation,  
+et décide de l’action à appliquer :
+
+- Passed
+- Whitelisted
+- Blocked
+
+➡️ **Aucune décision de blocage n’est prise ailleurs que dans le SOAR.**
+
+---
+
+## Position dans l’architecture globale
+
+CAPTURE → ML → ORCHESTRATEUR → SOAR → ACTION → DATABASE
+
+- Le ML **détecte**
+- L’orchestrateur **transmet**
+- Le SOAR **décide et agit**
+- La base de données **enregistre la vérité finale**
+
+Le SOAR est volontairement isolé :
+- pas de ML
+- pas d’UI
+- pas d’accès à la base applicative
+
+---
+
+## Responsabilités du SOAR
+
+### Ce qu’il fait
+
+- reçoit un événement DDoS
+- vérifie l’authenticité (secret partagé)
+- applique un seuil de confiance
+- vérifie la whitelist
+- bloque l’IP si nécessaire
+- notifie via Telegram
+- journalise chaque décision
+
+### Ce qu’il ne fait pas
+
+- Machine Learning
+- Interface utilisateur
+- Authentification utilisateur
+- Gestion de base de données métier
+
+---
+
+## Architecture du répertoire
 
 ```bash
-.
-.
-.
-├── capture/                  # service actuel (Flask / ML / DB)
-│   ├── app.py
-│   ├── inference/
-│   ├── models/
-│   ├── templates/
-│   ├── Dockerfile
-│   └── ...
+soar/
+├── app/
+│ ├── main.py # API Flask + logique de décision
+│ ├── blocker.py # Blocage IP (iptables)
+│ ├── whitelist.py # Gestion whitelist (préfixes IP)
+│ └── telegram.py # Notifications Telegram
 │
-├── database/
-│   └── ...
+├── config/
+│ └── config.json # Mode de blocage (log / iptables)
 │
-├── soar/                     # 🆕 micro-service SOAR
-│   ├── app/
-│   │   ├── main.py           # API SOAR (webhook)
-│   │   ├── blocker.py        # logique blocage IP
-│   │   ├── telegram.py       # notifications
-│   │   ├── whitelist.py
-│   │   └── rate_limit.py
-│   │
-│   ├── config/
-│   │   └── config.json
-│   │
-│   ├── logs/
-│   │   └── soar.log
-│   │
-│   ├── Dockerfile
-│   └── requirements.txt
+├── logs/
+│ └── soar.log # Journal des actions
 │
-├── docker-compose.yml
-└── .env
+├── Dockerfile # Image Docker du SOAR
+├── requirements.txt # Dépendances Python
+└── README.md
 ```
 
-------
 
-# 2️⃣ Rôle du micro-service SOAR
 
-**Responsabilités uniques :**
+---
 
-- recevoir un événement DDoS
-- vérifier whitelist / rate-limit
-- bloquer l’IP (iptables / ipset)
-- notifier Telegram
-- journaliser
-
-**Ce qu’il ne fait PAS :**
-
-- ML
-- UI
-- accès DB applicative
-- auth utilisateur
-
-------
-
-# 3️⃣ API SOAR 
+## API SOAR
 
 ### Endpoint unique
 
-```
 POST /alert
-```
 
-### Payload envoyé par Flask
+### Payload attendu
 
 ```json
 {
-  "secret": "WEBHOOK_SECRET",
-  "src_ip": "104.18.32.47",
+  "secret": "shared-secret",
+  "src_ip": "1.2.3.4",
   "verdict": "DDoS",
-  "probability": 0.38,
-  "flow_id": 164,
-  "timestamp": "2025-12-13 11:24:58"
+  "probability": 0.92
 }
 ```
 
+- `secret` : authentification du webhook
+- `src_ip` : IP source suspecte
+- `verdict` : doit être `DDoS`
+- `probability` : score ML
+
 ------
 
-# 4️⃣ Code SOAR – structure interne
+## Fonctionnement détaillé
 
-## `soar/app/main.py`
+### 1. Authentification
 
-```python
-from flask import Flask, request, jsonify
-from blocker import block_ip
-from telegram import send_telegram
-from whitelist import is_whitelisted
-import json, os
+Si le secret est incorrect :
+➡️ requête rejetée (`401 unauthorized`)
 
-app = Flask(__name__)
+------
 
-CONFIG_PATH = "/soar/config/config.json"
-with open(CONFIG_PATH) as f:
-    CONFIG = json.load(f)
+### 2. Filtrage initial
 
-@app.route("/alert", methods=["POST"])
-def alert():
-    data = request.json
+Une alerte est ignorée si :
 
-    if not data or data.get("secret") != CONFIG["security"]["webhook_secret"]:
-        return jsonify({"error": "unauthorized"}), 401
+- verdict ≠ `DDoS`
+- IP absente
+- probabilité < seuil
 
-    src_ip = data.get("src_ip")
-    verdict = data.get("verdict")
+------
 
-    if verdict != "DDoS" or not src_ip:
-        return jsonify({"status": "ignored"})
+### 3. Seuil de confiance
 
-    wl, rule = is_whitelisted(src_ip, CONFIG["security"]["whitelist_ips"])
-    if wl:
-        send_telegram(f"IP {src_ip} whitelistée ({rule}) – pas de blocage", CONFIG)
-        return jsonify({"status": "whitelisted"})
+Défini par variable d’environnement :
 
-    if block_ip(src_ip):
-        send_telegram(
-            f"🚨 IP BLOQUÉE\nIP: {src_ip}\nProb: {data.get('probability')}",
-            CONFIG
-        )
-        return jsonify({"status": "blocked"})
+```less
+SOAR_MIN_PROBABILITY=0.8
+```
 
-    return jsonify({"status": "failed"}), 500
+En dessous :
+➡️ l’alerte est acceptée mais **aucune action** n’est prise.
+
+------
+
+### 4. Whitelist IP
+
+Définie par variable d’environnement :
+
+```less
+SOAR_WHITELIST_IPS=127.0.0.1,192.168.1.,10.
+```
+
+- support des **préfixes IP**
+- exemple : `192.168.1.` autorise tout le sous-réseau
+
+Si whitelistée :
+➡️ action = `Passed`
+
+------
+
+### 5. Mode de blocage
+
+Configuré dans :
+
+```less
+config/config.json
+{
+  "blocking": {
+    "method": "log"
+  }
+}
+```
+
+Modes disponibles :
+
+- `iptables` : blocage réel
+- `log` : mode développement (aucune règle appliquée)
+
+------
+
+### 6. Blocage réseau
+
+En mode `iptables` :
+
+```less
+iptables -I INPUT -s <IP> -j DROP
+```
+
+- règle appliquée immédiatement
+- action journalisée
+- notification Telegram envoyée
+
+------
+
+### 7. Notifications Telegram
+
+Chaque blocage génère un message contenant :
+
+- IP bloquée
+- probabilité
+- méthode utilisée
+
+Variables requises :
+
+```less
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
 ```
 
 ------
 
-## `soar/app/blocker.py`
+### 8. Logs
 
-```python
-import subprocess
-import logging
+Tous les événements sont écrits dans :
 
-def block_ip(ip):
-    try:
-        subprocess.run(
-            ["iptables", "-I", "INPUT", "-s", ip, "-j", "DROP"],
-            check=True
-        )
-        logging.info(f"IP bloquée: {ip}")
-        return True
-    except Exception as e:
-        logging.error(f"Erreur blocage {ip}: {e}")
-        return False
+```less
+logs/soar.log
 ```
+
+Les logs servent :
+
+- d’audit
+- de preuve de décision
+- de support au debug
 
 ------
 
-## `soar/app/telegram.py`
+## Dépendances
 
-```python
-import requests
-
-def send_telegram(msg, config):
-    token = config["telegram"]["bot_token"]
-    chat_id = config["telegram"]["chat_id"]
-
-    requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": msg},
-        timeout=10
-    )
-```
+- Python 3
+- Flask
+- Requests
+- iptables (si blocage réel)
 
 ------
 
-## `soar/app/whitelist.py`
+## Tests manuels
 
-```python
-def is_whitelisted(ip, whitelist):
-    for w in whitelist:
-        if ip.startswith(w.rstrip(".")):
-            return True, w
-    return False, None
-```
-
-------
-
-# 5️⃣ Dockerfile SOAR
-
-## `soar/Dockerfile`
-
-```dockerfile
-FROM python:3.11-slim
-
-RUN apt update && apt install -y iptables && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /soar
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY app/ app/
-COPY config/ config/
-
-EXPOSE 6000
-
-CMD ["python", "app/main.py"]
-```
-
-------
-
-## `soar/requirements.txt`
-
-```
-flask
-requests
-```
-
-------
-
-# 6️⃣ docker-compose.yml
-
-```yaml
-services:
-  web:
-    build: ./capture
-    ports:
-      - "5500:5500"
-    depends_on:
-      - db
-      - soar
-
-  soar:
-    build: ./soar
-    container_name: soar
-    privileged: true
-    ports:
-      - "6000:6000"
-    volumes:
-      - ./soar/logs:/var/log/soar
-
-  db:
-    image: mysql:8
-    ...
-```
-
-⚠️ `privileged: true` **uniquement pour SOAR**
-Jamais pour Flask.
-
-------
-
-# 7️⃣ Changement côté Flask (1 seul endroit)
-
-Dans l'orchestrateur / insertion flow :
-
-```python
-import requests
-
-def notify_soar(flow):
-    if flow["verdict"] != "DDoS":
-        return
-
-    requests.post(
-        "http://soar:6000/alert",
-        json={
-            "secret": os.getenv("SOAR_SECRET"),
-            "src_ip": flow["src_ip"],
-            "verdict": flow["verdict"],
-            "probability": flow["probability"],
-            "flow_id": flow["id"],
-            "timestamp": flow["timestamp"]
-        },
-        timeout=2
-    )
-```
-
-Appelé **après insertion DB**, jamais avant.
-
-------
-
-# 8️⃣ Pourquoi cette architecture est solide
-
-- isolation des privilèges
-- SOAR redémarrable indépendamment
-- facile à tester (`curl`)
-- évolutif vers ipset / nftables
-- compatible ElastAlert2 plus tard
-- production-ready
-
-------
-
-# 9️⃣ 
-
-**Notes :** 
-
-| Élément          | Où                  |
-| ---------------- | ------------------- |
-| Telegram token   | `.env`              |
-| Telegram chat id | `.env`              |
-| Webhook secret   | `.env`              |
-| Whitelist IPs    | `.env`              |
-| Mode de blocage  | `config.json`       |
-| Secrets          | **JAMAIS dans Git** |
-
-
-
-## Pour vérifier que ce micro-service fonctionne : 
-
-docker build -t soar .
-
-docker run -d \
-  -p 6000:6000 \
-  --name soar \
-  --env-file ../.env \
-  --cap-add NET_ADMIN \
-  soar
-
-
-
-## Étape suivante immédiate : tester le SOAR pour de vrai
-
-### 1️⃣ Vérifie que le port écoute
-
-Sur la machine hôte :
-
-```bash
-ss -tulpen | grep 6000
-```
-
-Tu dois voir Flask écouter sur `0.0.0.0:6000`.
-
-------
-
-### 2️⃣ Test du webhook (le plus important)
-
-Depuis ta machine hôte :
+### Test du webhook
 
 ```bash
 curl -X POST http://localhost:6000/alert \
@@ -341,46 +241,25 @@ curl -X POST http://localhost:6000/alert \
   }'
 ```
 
-### Résultat attendu
+Réponse attendue :
 
-```bash
+```json
 {"status":"blocked"}
 ```
 
-Et dans les logs :
-
-```bash
-docker logs -f soar
-```
-
-Tu dois voir :
-
-- message de blocage
-- tentative iptables
-- envoi Telegram
-
 ------
 
-## Vérifier que l’IP est réellement bloquée
+### Vérification iptables
 
 Dans le conteneur :
 
 ```bash
-docker exec -it soar sh
 iptables -L INPUT -n --line-numbers
-```
-
-Tu dois voir une règle :
-
-```less
-Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination         
-1    DROP       all  --  8.8.8.8              0.0.0.0/0 
 ```
 
 ------
 
-## Tester la whitelist
+### Test whitelist
 
 ```bash
 curl -X POST http://localhost:6000/alert \
@@ -394,154 +273,39 @@ curl -X POST http://localhost:6000/alert \
 
 Résultat attendu :
 
-```less
-{"status":"whitelisted"}
+```json
+{"status":"passed"}
 ```
 
-Et **aucune règle iptables ajoutée**.
+Aucune règle iptables ajoutée.
 
+------
 
+## Sécurité
 
-```pgsql
-[ Orchestrator ]
-   |
-   |  POST /alert (JSON + secret)
-   v
-[ SOAR Service ]  --> iptables / ipset
-        |
-        +--> Telegram
+- Secret partagé obligatoire
+- Whitelist réseau
+- Seuil de confiance configurable
+- Journalisation complète
+- Privilèges élevés **uniquement** pour ce service
 
-```
+------
 
-```yaml
-ML → verdict = DDoS ?
-        |
-        v
-     SOAR
-        |
-        v
-Décision finale (Blocked / Passed / Whitelisted)
-        |
-        v
-Insertion DB
+## Perspectives d’évolution
 
-```
+- Blocage temporaire avec expiration
+- Support ipset / nftables
+- Corrélation multi-alertes
+- Stockage des décisions en base dédiée
+- Interface d’administration SOAR
+- Intégration SIEM / SOAR externe
 
-```pgsql
-┌──────────────┐
-│ Realtime Cap │
-└──────┬───────┘
-       │
-       v
-┌──────────────┐
-│ Orchestrator │  (ML only)
-│  - capture   │
-│  - inference │
-└──────┬───────┘
-       │ POST /alert
-       v
-┌──────────────┐
-│     SOAR     │  (Decision engine)
-│ - whitelist  │
-│ - block IP   │
-│ - notify     │
-└──────┬───────┘
-       │ JSON response
-       v
-┌──────────────┐
-│   Database   │  (truth)
-└──────────────┘
-```
+------
 
+## Résumé
 
+Le SOAR est le **cerveau décisionnel** du projet.
 
-```less
-PACKET
-  ↓
-ML verdict = DDoS
-  ↓
-CALL SOAR
-  ↓
-SOAR:
-  - whitelist ?
-  - block ?
-  ↓
-decision = Blocked | Passed
-  ↓
-INSERT INTO flows (action = decision)
+Il transforme une prédiction ML en **action réelle, traçable et sécurisée**.
 
-```
-
-```objective-c
-CAPTURE → ML → ORCHESTRATEUR → SOAR → ACTION → DB
-```
-
-
-
-Insertion sql manuelle (pour test & validation)
-
-```bash
-docker exec -it mysql_db sh
-mysql -u bank_user -p # entrez password
-```
-
-```mysql
-use ddos_detection;
-```
-
-Un vrai positif
-
-```mysql
-INSERT INTO flows (
-    timestamp,
-    src_ip,
-    dst_ip,
-    src_port,
-    dst_port,
-    prediction,
-    verdict,
-    probability,
-    threshold,
-    action
-) VALUES (
-    NOW(),
-    '8.8.8.8',
-    '192.168.1.81',
-    443,
-    443,
-    1,
-    'DDoS',
-    0.98,
-    0.11,
-    'Blocked'
-);
-```
-
-Un faux négatif
-
-```mysql
-INSERT INTO flows (
-    timestamp,
-    src_ip,
-    dst_ip,
-    src_port,
-    dst_port,
-    prediction,
-    verdict,
-    probability,
-    threshold,
-    action
-) VALUES (
-    NOW(),
-    '8.8.8.8',
-    '192.168.1.81',
-    443,
-    443,
-    1,
-    'Benign',
-    0.98,
-    0.11,
-    'Blocked'
-);
-```
-
+Simple, isolé, et conçu pour évoluer vers un environnement professionnel.

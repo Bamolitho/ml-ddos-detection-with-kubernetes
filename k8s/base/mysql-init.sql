@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS flows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    src_ip VARCHAR(45),
+    verdict VARCHAR(20),
+    probability FLOAT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
