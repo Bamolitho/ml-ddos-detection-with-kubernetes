@@ -4,28 +4,28 @@
 
 ## TABLE DES MATIÈRES
 
-1. [INTRODUCTION](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#chapitre-1--introduction)
-   - 1.1 [Introduction générale](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#11-introduction-générale)
-   - 1.2 [Description de la problématique](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#12-description-de-la-problématique)
-   - 1.3 [Description du développement](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#13-description-du-développement)
-2. [APPROCHE PRISE POUR LA CONCEPTION](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#chapitre-2--approche-prise-pour-la-conception)
-   - 2.1 [Introduction](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#21-introduction)
-   - 2.2 [Architecture du système](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#22-architecture-du-système)
-   - 2.3 [Diagrammes de cas d'utilisation](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#23-diagrammes-de-cas-dutilisation)
-   - 2.4 [Diagrammes de séquences](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#24-diagrammes-de-séquences)
-   - 2.5 [Diagrammes d'activités](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#25-diagrammes-dactivités)
-   - 2.6 [Conclusion](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#26-conclusion)
-3. [IMPLÉMENTATION ET TESTS](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#chapitre-3--implémentation-et-tests)
-   - 3.1 [Introduction](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#31-introduction)
-   - 3.2 [Outils d'implémentation](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#32-outils-dimplémentation)
-   - 3.3 [Approche prise pour l'implémentation](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#33-approche-prise-pour-limplémentation)
-   - 3.4 [Discussion des résultats](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#34-discussion-des-résultats)
-   - 3.5 [Conclusion](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#35-conclusion)
-4. [CONCLUSION](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#chapitre-4--conclusion)
-5. [APPENDICES](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#appendices)
-   - [Appendice A : Détails de l'implémentation](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#appendice-a--détails-de-limplémentation)
-   - [Appendice B : Manuel d'utilisation](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#appendice-b--manuel-dutilisation)
-6. [BIBLIOGRAPHIE](https://claude.ai/chat/cf1beb59-b7be-4ddb-bc7d-e1721849c3dd#bibliographie)
+1. [INTRODUCTION](#chapitre-1--introduction)
+   - 1.1 [Introduction générale](#11-introduction-générale)
+   - 1.2 [Description de la problématique](#12-description-de-la-problématique)
+   - 1.3 [Description du développement](#13-description-du-développement)
+2. [APPROCHE PRISE POUR LA CONCEPTION](#chapitre-2--approche-prise-pour-la-conception)
+   - 2.1 [Introduction](#21-introduction)
+   - 2.2 [Architecture du système](#22-architecture-du-système)
+   - 2.3 [Diagrammes de cas d'utilisation](#23-diagrammes-de-cas-dutilisation)
+   - 2.4 [Diagrammes de séquences](#24-diagrammes-de-séquences)
+   - 2.5 [Diagrammes d'activités](#25-diagrammes-dactivités)
+   - 2.6 [Conclusion](#26-conclusion)
+3. [IMPLÉMENTATION ET TESTS](#chapitre-3--implémentation-et-tests)
+   - 3.1 [Introduction](#31-introduction)
+   - 3.2 [Outils d'implémentation](#32-outils-dimplémentation)
+   - 3.3 [Approche prise pour l'implémentation](#33-approche-prise-pour-limplémentation)
+   - 3.4 [Discussion des résultats](#34-discussion-des-résultats)
+   - 3.5 [Conclusion](#35-conclusion)
+4. [CONCLUSION](#chapitre-4--conclusion)
+5. [APPENDICES](#appendices)
+   - [Appendice A : Détails de l'implémentation](#appendice-a--détails-de-limplémentation)
+   - [Appendice B : Manuel d'utilisation](#appendice-b--manuel-dutilisation)
+6. [BIBLIOGRAPHIE](#bibliographie)
 
 ------
 
@@ -352,7 +352,7 @@ Le **SOAR notifie Telegram uniquement en cas d’attaque confirmée**.
              |     MySQL     |   | Telegram  |
              |---------------|   |-----------|
              | - Flow        |   | - Alerte  |
-             | - Verdict     |   |           |
+             | - Verdict     |   |           |à
              | - Action      |   |           |
              +---------------+   +-----------+
 ```
@@ -405,7 +405,7 @@ Le **SOAR notifie Telegram uniquement en cas d’attaque confirmée**.
 
 ------
 
-### Point clé à retenir (important pour le rapport)
+### Point clé
 
 - **Le modèle ML ne décide pas**
 - **Le SOAR décide**
